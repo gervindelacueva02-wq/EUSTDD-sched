@@ -6,7 +6,6 @@ services:
     plan: free
     region: oregon
     branch: main
-    rootDir: v1
     buildCommand: npm install && npx prisma generate && npx prisma db push && npm run build
     startCommand: npm run start
     envVars:

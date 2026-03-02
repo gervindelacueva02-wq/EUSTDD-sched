@@ -695,11 +695,11 @@ function Header({
   const { settings } = useScheduleStore();
   const requiresPin = settings.pinEnabled && settings.pin;
 
-  // Check if session is already unlocked
-  const isSessionUnlocked = () => {
-    return sessionStorage.getItem('eustdd-session-auth') === 'unlocked';
-  };
-
+ // Check if session is already unlocked (safe for SSR)
+const isSessionUnlocked = () => {
+  if (typeof window === 'undefined') return false;
+  return sessionStorage.getItem('eustdd-session-auth') === 'unlocked';
+};
   const handleProtectedAction = (action: () => void, type: 'settings' | 'add', addType?: string) => {
     // If PIN is required but session is already unlocked, proceed directly
     if (requiresPin && isSessionUnlocked()) {
@@ -716,9 +716,11 @@ function Header({
     }
   };
 
-  const handlePinSuccess = () => {
-    // Mark session as unlocked
+ const handlePasswordSuccess = () => {
+  // Mark session as unlocked
+  if (typeof window !== 'undefined') {
     sessionStorage.setItem('eustdd-session-auth', 'unlocked');
+  }
     
     if (pendingAction === 'settings') {
       onOpenSettings();
@@ -2939,30 +2941,36 @@ export default function EUSTDDSchedule() {
     };
   }, [loadFromServer, startAutoSync, stopAutoSync]);
 
+// Check session authentication on mount
+useEffect(() => {
+  if (!_hasHydrated) return;
+  if (typeof window === 'undefined') return;
+  
   // Check session authentication on mount
-  useEffect(() => {
-    if (!_hasHydrated) return;
-    
-    // Check if PIN protection is enabled
-    const requiresPin = settings.pinEnabled && settings.pin;
-    
-    if (requiresPin) {
-      // Check if session is already unlocked (using sessionStorage)
-      const sessionAuth = sessionStorage.getItem('eustdd-session-auth');
-      // Use microtask to avoid synchronous setState warning
-      queueMicrotask(() => {
-        if (sessionAuth === 'unlocked') {
-          setIsSessionUnlocked(true);
-        } else {
-          // Show PIN dialog
-          setSessionPinDialogOpen(true);
-        }
-      });
-    } else {
-      // No PIN required, unlock immediately
-      queueMicrotask(() => setIsSessionUnlocked(true));
-    }
-  }, [_hasHydrated, settings.pinEnabled, settings.pin]);
+useEffect(() => {
+  if (!_hasHydrated) return;
+  if (typeof window === 'undefined') return;
+  
+  // Check if password protection is enabled
+  const requiresPassword = settings.passwordEnabled && settings.password;
+  
+  if (requiresPassword) {
+    // Check if session is already unlocked (using sessionStorage)
+    const sessionAuth = sessionStorage.getItem('eustdd-session-auth');
+    // Use microtask to avoid synchronous setState warning
+    queueMicrotask(() => {
+      if (sessionAuth === 'unlocked') {
+        setIsSessionUnlocked(true);
+      } else {
+        // Show password dialog
+        setSessionPasswordDialogOpen(true);
+      }
+    });
+  } else {
+    // No password required, unlock immediately
+    queueMicrotask(() => setIsSessionUnlocked(true));
+  }
+}, [_hasHydrated, settings.passwordEnabled, settings.password]);
 
   // Apply theme
   useEffect(() => {
