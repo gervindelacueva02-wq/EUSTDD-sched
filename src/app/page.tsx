@@ -16,8 +16,7 @@ import {
   Pencil
 } from 'lucide-react';
 import { useScheduleStore } from '@/store/schedule-store';
-import type { ScheduleEvent, PersonnelStatus, Project, EventStatus, TransitionStyle } from '@/types/schedule';
-import { Button } from '@/components/ui/button';
+import type { ScheduleEvent, PersonnelStatus, Project, Settings as SettingsType, EventStatus, TransitionStyle, TransitionSpeed } from '@/types/schedule';import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { 
@@ -91,17 +90,14 @@ const getUpcomingEvents = (events: ScheduleEvent[], minutesBefore: number = 5): 
   const notifications: EventNotification[] = [];
   
   for (const event of events) {
-    // Only check today's events
     if (!isToday(parseISO(event.dateStarted))) continue;
     
-    // Parse event start time
     const [hours, minutes] = event.timeStart.split(':').map(Number);
     const eventStartTime = new Date(now);
     eventStartTime.setHours(hours, minutes, 0, 0);
     
     const diffMinutes = differenceInMinutes(eventStartTime, now);
     
-    // Check if event is starting within the specified minutes and hasn't started yet
     if (diffMinutes > 0 && diffMinutes <= minutesBefore) {
       notifications.push({
         event,
@@ -125,7 +121,7 @@ const getTransitionSpeed = (speed: string, customSeconds: number): number => {
   }
 };
 
-// Get page display duration based on transition speed (for pagination modes)
+// Get page display duration based on transition speed
 const getPageDisplayDuration = (speed: string): number => {
   switch (speed) {
     case 'verySlow': return 8000;
@@ -137,7 +133,7 @@ const getPageDisplayDuration = (speed: string): number => {
   }
 };
 
-// Get scroll speed for continuous scroll modes (pixels per second)
+// Get scroll speed for continuous scroll modes
 const getScrollSpeed = (speed: string): number => {
   switch (speed) {
     case 'verySlow': return 15;
@@ -153,7 +149,7 @@ const getScrollSpeed = (speed: string): number => {
 function useOverflowTransition<T>(
   items: T[],
   containerRef: React.RefObject<HTMLDivElement | null>,
-  itemHeight: number = 32, // Approximate height per item in pixels
+  itemHeight: number = 32,
   settings: { transitionStyle: TransitionStyle; transitionSpeed: string; smoothScrollEnabled: boolean; customTransitionSeconds: number }
 ) {
   const [currentPage, setCurrentPage] = useState(0);
@@ -165,7 +161,6 @@ function useOverflowTransition<T>(
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const isAnimatingRef = useRef(false);
 
-  // Check for overflow and calculate items per page
   useEffect(() => {
     const checkOverflow = () => {
       if (containerRef.current) {
@@ -173,13 +168,11 @@ function useOverflowTransition<T>(
         const calculatedItemsPerPage = Math.floor(containerHeight / itemHeight);
         setItemsPerPage(Math.max(1, calculatedItemsPerPage));
         
-        // Measure actual content height instead of estimating
         const contentElement = containerRef.current.querySelector('[data-content-measure]');
         if (contentElement) {
           const actualContentHeight = contentElement.scrollHeight;
           setHasOverflow(actualContentHeight > containerHeight);
         } else {
-          // Fallback to estimation if content element not found
           const availableHeight = containerHeight - 12;
           const totalItemHeight = items.length * itemHeight;
           setHasOverflow(totalItemHeight > availableHeight);
@@ -187,16 +180,13 @@ function useOverflowTransition<T>(
       }
     };
 
-    // Use requestAnimationFrame for initial check to ensure DOM is ready
     const rafId = requestAnimationFrame(() => {
       checkOverflow();
     });
     
-    // Use ResizeObserver for more reliable container size detection
     let resizeObserver: ResizeObserver | null = null;
     if (typeof ResizeObserver !== 'undefined' && containerRef.current) {
       resizeObserver = new ResizeObserver(() => {
-        // Small delay to ensure container dimensions are updated
         requestAnimationFrame(checkOverflow);
       });
       resizeObserver.observe(containerRef.current);
@@ -212,16 +202,13 @@ function useOverflowTransition<T>(
     };
   }, [items.length, itemHeight, containerRef]);
 
-  // Calculate total pages
   const totalPages = Math.max(1, Math.ceil(items.length / itemsPerPage));
 
-  // Get current page items
   const currentItems = hasOverflow && 
     (settings.transitionStyle === 'fade' || settings.transitionStyle === 'slideUp' || settings.transitionStyle === 'slideLeft')
     ? items.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage)
     : items;
 
-  // Cleanup function for all animations
   const cleanupAnimations = useCallback(() => {
     if (animationRef.current !== null) {
       cancelAnimationFrame(animationRef.current);
@@ -235,18 +222,15 @@ function useOverflowTransition<T>(
     lastTimeRef.current = 0;
   }, []);
 
-  // Reset scroll and page when transition style changes
   useEffect(() => {
     cleanupAnimations();
     scrollPositionRef.current = 0;
     if (containerRef.current) {
       containerRef.current.scrollTop = 0;
     }
-    // Use microtask to avoid synchronous setState warning
     queueMicrotask(() => setCurrentPage(0));
   }, [settings.transitionStyle, cleanupAnimations, containerRef]);
 
-  // Pagination for fade/slideUp/slideLeft
   useEffect(() => {
     if (!hasOverflow) return;
     if (settings.transitionStyle !== 'fade' && settings.transitionStyle !== 'slideUp' && settings.transitionStyle !== 'slideLeft') return;
@@ -265,7 +249,6 @@ function useOverflowTransition<T>(
     return () => cleanupAnimations();
   }, [hasOverflow, settings.transitionStyle, settings.transitionSpeed, totalPages, itemsPerPage, cleanupAnimations]);
 
-  // Continuous scroll for verticalAutoScroll and gentleContinuousScroll
   useEffect(() => {
     if (!hasOverflow) return;
     if (settings.transitionStyle !== 'verticalAutoScroll' && settings.transitionStyle !== 'gentleContinuousScroll') return;
@@ -277,11 +260,9 @@ function useOverflowTransition<T>(
     const scrollSpeed = getScrollSpeed(settings.transitionSpeed);
     
     if (settings.transitionStyle === 'gentleContinuousScroll') {
-      // Smooth continuous scroll with seamless loop
       isAnimatingRef.current = true;
       lastTimeRef.current = 0;
       
-      // Get the height of one set of items (half of the duplicated content)
       const singleSetHeight = container.scrollHeight / 2;
       
       const animate = (timestamp: number) => {
@@ -295,8 +276,6 @@ function useOverflowTransition<T>(
 
         scrollPositionRef.current += (scrollSpeed * delta) / 1000;
         
-        // When reaching the end of the first set, seamlessly reset to beginning
-        // This creates an infinite loop effect
         if (scrollPositionRef.current >= singleSetHeight) {
           scrollPositionRef.current = scrollPositionRef.current - singleSetHeight;
         }
@@ -309,9 +288,8 @@ function useOverflowTransition<T>(
       
       return () => cleanupAnimations();
     } else if (settings.transitionStyle === 'verticalAutoScroll') {
-      // Step-based auto scroll with pause
-      const stepSize = itemHeight * 2; // Scroll 2 items at a time
-      const pauseDuration = 2000; // 2 second pause
+      const stepSize = itemHeight * 2;
+      const pauseDuration = 2000;
       isAnimatingRef.current = true;
       
       intervalRef.current = setInterval(() => {
@@ -322,7 +300,6 @@ function useOverflowTransition<T>(
         scrollPositionRef.current += stepSize;
         
         if (scrollPositionRef.current >= maxScroll) {
-          // Pause at bottom, then reset to top
           const timeoutId = setTimeout(() => {
             if (!isAnimatingRef.current) return;
             scrollPositionRef.current = 0;
@@ -331,7 +308,6 @@ function useOverflowTransition<T>(
             }
           }, pauseDuration / 2);
           
-          // Store timeout for cleanup
           return () => clearTimeout(timeoutId);
         } else {
           currentContainer.scrollTo({
@@ -345,14 +321,12 @@ function useOverflowTransition<T>(
     }
   }, [hasOverflow, settings.transitionStyle, settings.transitionSpeed, settings.smoothScrollEnabled, itemHeight, cleanupAnimations]);
 
-  // Reset scroll position when items change
   useEffect(() => {
     cleanupAnimations();
     scrollPositionRef.current = 0;
     if (containerRef.current) {
       containerRef.current.scrollTop = 0;
     }
-    // Use microtask to avoid synchronous setState warning
     queueMicrotask(() => setCurrentPage(0));
   }, [items.length, cleanupAnimations, containerRef]);
 
@@ -398,7 +372,7 @@ const getTransitionVariants = (style: TransitionStyle, speed: number) => {
   }
 };
 
-// Password Entry Dialog with Hint, Lockout, and Recovery
+// Password Entry Dialog
 function PasswordDialog({ 
   open, 
   onClose, 
@@ -420,13 +394,9 @@ function PasswordDialog({
   
   const { settings, incrementFailedAttempts, resetFailedAttempts, setLockoutUntil } = useScheduleStore();
 
-  // Check if locked out
   const isLockedOut = settings.lockoutUntil && new Date(settings.lockoutUntil) > new Date();
-  
-  // Show hint after 3 failed attempts (derived state)
   const shouldShowHint = settings.failedAttempts >= 3 && !!settings.passwordHint;
 
-  // Calculate remaining lockout time
   useEffect(() => {
     if (!isLockedOut || !settings.lockoutUntil) {
       return;
@@ -445,9 +415,7 @@ function PasswordDialog({
     return () => clearInterval(interval);
   }, [isLockedOut, settings.lockoutUntil, setLockoutUntil, resetFailedAttempts]);
 
-  // Update showHint when shouldShowHint changes
   useEffect(() => {
-    // Use setTimeout to avoid synchronous setState warning
     const timer = setTimeout(() => {
       setShowHint(shouldShowHint);
     }, 0);
@@ -473,13 +441,11 @@ function PasswordDialog({
       incrementFailedAttempts();
       setPassword('');
       
-      // Check if should lockout (5 failed attempts)
       if (settings.failedAttempts + 1 >= 5) {
-        const lockoutTime = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes lockout
+        const lockoutTime = new Date(Date.now() + 5 * 60 * 1000);
         setLockoutUntil(lockoutTime.toISOString());
         setError('Too many failed attempts. Account locked for 5 minutes.');
         
-        // Send lockout notification email
         if (settings.recoveryEmail) {
           try {
             await fetch('/api/email', {
@@ -521,7 +487,6 @@ function PasswordDialog({
       
       if (response.ok) {
         setRecoverySent(true);
-        // Also send hint notification if hint exists
         if (settings.passwordHint) {
           await fetch('/api/email', {
             method: 'POST',
@@ -590,7 +555,7 @@ function PasswordDialog({
                 placeholder="Enter your password"
                 className="text-lg"
                 autoFocus
-                disabled={isLockedOut !== null && isLockedOut}
+                disabled={!!(isLockedOut !== null && isLockedOut)}
               />
             </div>
             
@@ -602,7 +567,7 @@ function PasswordDialog({
                 <Button 
                   type="submit" 
                   className="flex-1" 
-                  disabled={!password || (isLockedOut !== null && isLockedOut)}
+                  disabled={!password || !!(isLockedOut !== null && isLockedOut)}
                 >
                   Unlock
                 </Button>
@@ -668,6 +633,27 @@ function PasswordDialog({
   );
 }
 
+// PIN Dialog Component
+function PinDialog({ 
+  open, 
+  onClose, 
+  onSuccess,
+  title = "Enter PIN"
+}: { 
+  open: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+  title?: string;
+}) {
+  return (
+    <PasswordDialog 
+      open={open} 
+      onClose={onClose} 
+      onSuccess={onSuccess}
+      title={title}
+    />
+  );
+}
 // Header Component
 function Header({ 
   onOpenSettings, 
@@ -695,13 +681,12 @@ function Header({
   const { settings } = useScheduleStore();
   const requiresPin = settings.pinEnabled && settings.pin;
 
- // Check if session is already unlocked (safe for SSR)
-const isSessionUnlocked = () => {
-  if (typeof window === 'undefined') return false;
-  return sessionStorage.getItem('eustdd-session-auth') === 'unlocked';
-};
+  const isSessionUnlocked = () => {
+    if (typeof window === 'undefined') return false;
+    return sessionStorage.getItem('eustdd-session-auth') === 'unlocked';
+  };
+
   const handleProtectedAction = (action: () => void, type: 'settings' | 'add', addType?: string) => {
-    // If PIN is required but session is already unlocked, proceed directly
     if (requiresPin && isSessionUnlocked()) {
       action();
       return;
@@ -716,11 +701,10 @@ const isSessionUnlocked = () => {
     }
   };
 
- const handlePasswordSuccess = () => {
-  // Mark session as unlocked
-  if (typeof window !== 'undefined') {
-    sessionStorage.setItem('eustdd-session-auth', 'unlocked');
-  }
+  const handlePasswordSuccess = () => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('eustdd-session-auth', 'unlocked');
+    }
     
     if (pendingAction === 'settings') {
       onOpenSettings();
@@ -744,13 +728,11 @@ const isSessionUnlocked = () => {
       <header className="w-full bg-card border-b border-border px-2 sm:px-4 py-2 relative">
         {/* Mobile Layout */}
         <div className="flex flex-col gap-2 sm:hidden">
-          {/* Title Row */}
           <div className="flex items-center justify-between">
             <h1 className="text-lg font-bold tracking-wide text-foreground">
               EUSTDD SCHEDULE
             </h1>
             <div className="flex items-center gap-1">
-              {/* View Mode Dropdown - Mobile */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="icon" className="h-9 w-9">
@@ -764,7 +746,6 @@ const isSessionUnlocked = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
               
-              {/* Add Entry Button - Mobile */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="h-9 w-9">
@@ -780,14 +761,12 @@ const isSessionUnlocked = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
               
-              {/* Settings Button - Mobile */}
               <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => handleProtectedAction(onOpenSettings, 'settings')}>
                 <Settings className="h-5 w-5" />
               </Button>
             </div>
           </div>
           
-          {/* Date & Time Row - Mobile */}
           <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
               <CalendarIcon className="h-3.5 w-3.5" />
@@ -802,14 +781,12 @@ const isSessionUnlocked = () => {
         
         {/* Desktop/Tablet Layout */}
         <div className="hidden sm:flex items-center justify-between">
-          {/* Title - Left Side */}
           <div className="flex-1 min-w-0">
             <h1 className="text-xl lg:text-[30px] font-bold tracking-wide text-foreground">
               EUSTDD SCHEDULE
             </h1>
           </div>
           
-          {/* Date & Time - Center */}
           <div className="flex-1 flex justify-center">
             <div className="flex flex-wrap items-center justify-center gap-2 lg:gap-3 text-sm lg:text-[18px] text-muted-foreground">
               <span className="flex items-center gap-1.5">
@@ -823,9 +800,7 @@ const isSessionUnlocked = () => {
             </div>
           </div>
           
-          {/* Right Side Controls */}
           <div className="flex-1 flex justify-end items-center gap-1 lg:gap-2">
-            {/* View Mode Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="h-9 px-2 lg:px-3 gap-1.5">
@@ -840,7 +815,6 @@ const isSessionUnlocked = () => {
               </DropdownMenuContent>
             </DropdownMenu>
             
-            {/* Add Entry Button */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-10 w-10 lg:h-12 lg:w-12">
@@ -856,7 +830,6 @@ const isSessionUnlocked = () => {
               </DropdownMenuContent>
             </DropdownMenu>
             
-            {/* Settings Button */}
             <Button variant="ghost" size="icon" onClick={() => handleProtectedAction(onOpenSettings, 'settings')} className="h-10 w-10 lg:h-12 lg:w-12">
               <Settings className="h-5 w-5 lg:h-6 lg:w-6" />
             </Button>
@@ -871,7 +844,7 @@ const isSessionUnlocked = () => {
           setPendingAction(null);
           setPendingAddType('');
         }}
-        onSuccess={handlePinSuccess}
+        onSuccess={handlePasswordSuccess}
       />
     </>
   );
@@ -918,7 +891,7 @@ function EventRow({ event, onDelete, onEdit, transitionStyle, transitionSpeed, s
       layout
       className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4 py-2 px-2 sm:px-3 hover:bg-muted/50 rounded group transition-colors"
     >
-      {/* Mobile Layout: Single column with status dot, title, and time */}
+      {/* Mobile Layout */}
       <div className="flex items-start gap-2 flex-1 min-w-0 sm:hidden">
         <StatusDot color={statusColor} size="sm" className="mt-1.5" />
         <div className="flex-1 min-w-0">
@@ -926,22 +899,12 @@ function EventRow({ event, onDelete, onEdit, transitionStyle, transitionSpeed, s
             <span className="font-medium text-sm text-foreground break-words flex-1">{event.title}</span>
             <div className="flex items-center gap-0.5 flex-shrink-0">
               {onEdit && (
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-7 w-7"
-                  onClick={onEdit}
-                >
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onEdit}>
                   <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                 </Button>
               )}
               {onDelete && (
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-7 w-7"
-                  onClick={onDelete}
-                >
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onDelete}>
                   <Trash2 className="h-3.5 w-3.5 text-destructive" />
                 </Button>
               )}
@@ -957,7 +920,7 @@ function EventRow({ event, onDelete, onEdit, transitionStyle, transitionSpeed, s
         </div>
       </div>
       
-      {/* Desktop Layout: Three columns */}
+      {/* Desktop Layout */}
       <div className="hidden sm:flex items-start gap-2 w-[50%] min-w-0">
         <StatusDot color={statusColor} size="md" className="mt-2" />
         <span className="font-medium text-base lg:text-[20px] text-foreground break-words">{event.title}</span>
@@ -970,10 +933,7 @@ function EventRow({ event, onDelete, onEdit, transitionStyle, transitionSpeed, s
           </div>
         )}
         <div className="text-muted-foreground text-sm lg:text-[16px] whitespace-nowrap">
-          {isAllDay 
-            ? 'All Day' 
-            : `${formatTime12Hour(event.timeStart)} - ${formatTime12Hour(event.timeEnd)}`
-          }
+          {isAllDay ? 'All Day' : `${formatTime12Hour(event.timeStart)} - ${formatTime12Hour(event.timeEnd)}`}
         </div>
       </div>
       
@@ -985,22 +945,12 @@ function EventRow({ event, onDelete, onEdit, transitionStyle, transitionSpeed, s
         )}
         <div className="flex items-center gap-0.5 flex-shrink-0 mt-1">
           {onEdit && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={onEdit}
-            >
+            <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" onClick={onEdit}>
               <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
             </Button>
           )}
           {onDelete && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={onDelete}
-            >
+            <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" onClick={onDelete}>
               <Trash2 className="h-3.5 w-3.5 text-destructive" />
             </Button>
           )}
@@ -1012,12 +962,7 @@ function EventRow({ event, onDelete, onEdit, transitionStyle, transitionSpeed, s
 
 // Schedule Panel Component
 function SchedulePanel({ 
-  title, 
-  date, 
-  events,
-  onDeleteEvent,
-  onEditEvent,
-  showDate = false
+  title, date, events, onDeleteEvent, onEditEvent, showDate = false
 }: { 
   title: string;
   date: string;
@@ -1030,18 +975,12 @@ function SchedulePanel({
   const transitionSpeed = getTransitionSpeed(settings.transitionSpeed, settings.customTransitionSeconds);
   const containerRef = useRef<HTMLDivElement>(null);
   
-  // Use overflow transition hook (item height: 20px font * 2 lines + padding = ~50px per item)
   const { currentItems, hasOverflow, currentPage, totalPages } = useOverflowTransition(
-    events,
-    containerRef,
-    50,
-    settings
+    events, containerRef, 50, settings
   );
 
-  // Determine if we should show paginated or scrolled content
   const isPaginationMode = ['fade', 'slideUp', 'slideLeft'].includes(settings.transitionStyle);
   
-  // Page transition variants
   const pageVariants = {
     fade: {
       initial: { opacity: 0 },
@@ -1069,312 +1008,218 @@ function SchedulePanel({
     ? pageVariants[settings.transitionStyle as 'fade' | 'slideUp' | 'slideLeft']
     : pageVariants.static;
 
-  // Content to render
   const renderItems = hasOverflow && isPaginationMode ? currentItems : events;
-  
-  // For gentle continuous scroll, duplicate items for seamless loop
   const isGentleScroll = settings.transitionStyle === 'gentleContinuousScroll';
   const displayItems = hasOverflow && isGentleScroll ? [...events, ...events] : renderItems;
   
-  // Use a stable key that changes when page content changes
-  // For continuous scroll modes, use a stable key to prevent re-renders
   const contentKey = isGentleScroll 
     ? 'continuous-scroll' 
     : (isPaginationMode && hasOverflow 
       ? `page-${currentPage}-${totalPages}-${currentItems.map(e => e.id).join('-')}` 
       : `all-${events.map(e => e.id).join('-')}`);
-  
-  // For gentle continuous scroll, don't use AnimatePresence to avoid interrupting the scroll
-  const shouldUseAnimatePresence = !isGentleScroll;
-  
+
   return (
-    <div className="bg-card border border-border rounded-lg h-full flex flex-col overflow-hidden">
-      <div className="px-2 py-1 border-b border-border bg-muted/30 flex items-center justify-between">
-        <h2 className="text-base sm:text-lg lg:text-[24px] font-bold text-foreground tracking-wide">{title}</h2>
-        <p className="text-[10px] sm:text-xs text-muted-foreground hidden sm:block">{date}</p>
+    <div className="bg-card rounded-lg border border-border shadow-sm flex flex-col min-h-0">
+      <div className="px-3 py-2 border-b border-border flex-shrink-0">
+        <h2 className="text-sm font-bold text-foreground tracking-wide">{title}</h2>
+        <p className="text-xs text-muted-foreground">{date}</p>
       </div>
+      
       <div 
         ref={containerRef}
-        className="flex-1 overflow-y-auto p-1 sm:p-1.5 scrollbar-hide"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        className="flex-1 overflow-y-auto overflow-x-hidden min-h-0"
+        style={{ scrollBehavior: settings.smoothScrollEnabled ? 'smooth' : 'auto' }}
       >
         {events.length === 0 ? (
-          <div className="flex items-center justify-center h-16 text-muted-foreground text-sm sm:text-lg">
-            —
+          <div className="flex items-center justify-center h-full text-muted-foreground text-sm p-4">
+            No events scheduled
           </div>
-        ) : shouldUseAnimatePresence ? (
+        ) : (
           <AnimatePresence mode="wait">
             <motion.div
               key={contentKey}
-              initial={currentPageVariant.initial}
-              animate={currentPageVariant.animate}
-              exit={currentPageVariant.exit}
-              className="space-y-0.5"
+              variants={currentPageVariant}
+              initial="initial"
+              animate="animate"
+              exit="exit"
               data-content-measure
             >
-              {displayItems.map((event, index) => (
-                <EventRow 
-                  key={`${event.id}-${index}`} 
-                  event={event} 
+              {displayItems.map((event) => (
+                <EventRow
+                  key={event.id}
+                  event={event}
                   onDelete={onDeleteEvent ? () => onDeleteEvent(event.id) : undefined}
                   onEdit={onEditEvent ? () => onEditEvent(event) : undefined}
-                  transitionStyle="static"
+                  transitionStyle={settings.transitionStyle}
                   transitionSpeed={transitionSpeed}
                   showDate={showDate}
                 />
               ))}
             </motion.div>
           </AnimatePresence>
-        ) : (
-          <div className="space-y-0.5" data-content-measure>
-            {displayItems.map((event, index) => (
-              <EventRow 
-                key={`${event.id}-${index}`} 
-                event={event} 
-                onDelete={onDeleteEvent ? () => onDeleteEvent(event.id) : undefined}
-                onEdit={onEditEvent ? () => onEditEvent(event) : undefined}
-                transitionStyle="static"
-                transitionSpeed={transitionSpeed}
-                showDate={showDate}
-              />
-            ))}
-          </div>
         )}
       </div>
+      
+      {hasOverflow && isPaginationMode && totalPages > 1 && (
+        <div className="px-3 py-1 border-t border-border flex-shrink-0 flex justify-center gap-1">
+          {Array.from({ length: totalPages }).map((_, i) => (
+            <div
+              key={i}
+              className={`w-1.5 h-1.5 rounded-full transition-colors ${
+                i === currentPage ? 'bg-primary' : 'bg-muted-foreground/30'
+              }`}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-// Personnel Status Panel - 3 Column Layout (stacked on mobile)
-function PersonnelStatusPanel({ onDeletePersonnel, onEditPersonnel }: { 
-  onDeletePersonnel: (id: string) => void;
-  onEditPersonnel: (personnel: PersonnelStatus) => void;
-}) {
-  const { personnelStatuses, settings } = useScheduleStore();
-  const today = new Date();
-  
-  const wfhPersonnel = personnelStatuses.filter(
-    (p) => p.type === 'WFH' && isDateInRange(p.dateStart, p.dateEnd, today)
-  );
-  
-  const ctoflPersonnel = personnelStatuses.filter(
-    (p) => (p.type === 'CTO' || p.type === 'FL') && isDateInRange(p.dateStart, p.dateEnd, today)
-  );
-  
-  const travelPersonnel = personnelStatuses.filter(
-    (p) => p.type === 'TRAVEL' && isDateInRange(p.dateStart, p.dateEnd, today)
-  );
-
-  return (
-    <div className="bg-card border border-border rounded-lg h-full flex flex-col overflow-hidden">
-      <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border overflow-hidden">
-        {/* CTO/FL Column */}
-        <PersonnelColumn 
-          title="CTO/FL" 
-          personnel={ctoflPersonnel} 
-          settings={settings}
-          onDeletePersonnel={onDeletePersonnel}
-          onEditPersonnel={onEditPersonnel}
-        />
-        
-        {/* WFH Column */}
-        <PersonnelColumn 
-          title="WFH" 
-          personnel={wfhPersonnel} 
-          settings={settings}
-          onDeletePersonnel={onDeletePersonnel}
-          onEditPersonnel={onEditPersonnel}
-        />
-        
-        {/* IN TRAVEL Column */}
-        <PersonnelColumn 
-          title="IN TRAVEL" 
-          personnel={travelPersonnel} 
-          settings={settings}
-          onDeletePersonnel={onDeletePersonnel}
-          onEditPersonnel={onEditPersonnel}
-        />
-      </div>
-    </div>
-  );
-}
-
-// Personnel Column with overflow transition
-function PersonnelColumn({ 
-  title, 
-  personnel, 
-  settings,
-  onDeletePersonnel,
-  onEditPersonnel 
-}: { 
-  title: string;
-  personnel: PersonnelStatus[];
-  settings: { transitionStyle: TransitionStyle; transitionSpeed: string; smoothScrollEnabled: boolean; customTransitionSeconds: number };
-  onDeletePersonnel: (id: string) => void;
-  onEditPersonnel: (personnel: PersonnelStatus) => void;
-}) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const transitionSpeed = getTransitionSpeed(settings.transitionSpeed, settings.customTransitionSeconds);
-  
-  // Personnel item height: 18px name + 12px date + padding = ~48px
-  const { currentItems, hasOverflow, currentPage, totalPages } = useOverflowTransition(
-    personnel,
-    containerRef,
-    48,
-    settings
-  );
-
-  const isPaginationMode = ['fade', 'slideUp', 'slideLeft'].includes(settings.transitionStyle);
-
-  const pageVariants = {
-    fade: {
-      initial: { opacity: 0 },
-      animate: { opacity: 1, transition: { duration: transitionSpeed } },
-      exit: { opacity: 0, transition: { duration: transitionSpeed / 2 } },
-    },
-    slideUp: {
-      initial: { opacity: 0, y: 30 },
-      animate: { opacity: 1, y: 0, transition: { duration: transitionSpeed } },
-      exit: { opacity: 0, y: -30, transition: { duration: transitionSpeed / 2 } },
-    },
-    slideLeft: {
-      initial: { opacity: 0, x: 30 },
-      animate: { opacity: 1, x: 0, transition: { duration: transitionSpeed } },
-      exit: { opacity: 0, x: -30, transition: { duration: transitionSpeed / 2 } },
-    },
-    static: {
-      initial: { opacity: 1 },
-      animate: { opacity: 1 },
-      exit: { opacity: 1 },
-    },
-  };
-
-  const currentPageVariant = isPaginationMode && hasOverflow
-    ? pageVariants[settings.transitionStyle as 'fade' | 'slideUp' | 'slideLeft']
-    : pageVariants.static;
-
-  const renderItems = hasOverflow && isPaginationMode ? currentItems : personnel;
-
-  // For gentle continuous scroll, duplicate items for seamless loop
-  const isGentleScroll = settings.transitionStyle === 'gentleContinuousScroll';
-  const displayItems = hasOverflow && isGentleScroll ? [...personnel, ...personnel] : renderItems;
-
-  // Use a stable key that changes when page content changes
-  // For continuous scroll modes, use a stable key to prevent re-renders
-  const contentKey = isGentleScroll 
-    ? 'continuous-scroll' 
-    : (isPaginationMode && hasOverflow 
-      ? `page-${currentPage}-${totalPages}-${currentItems.map(p => p.id).join('-')}` 
-      : `all-${personnel.map(p => p.id).join('-')}`);
-  
-  // For gentle continuous scroll, don't use AnimatePresence to avoid interrupting the scroll
-  const shouldUseAnimatePresence = !isGentleScroll;
-
-  return (
-    <div className="flex flex-col overflow-hidden h-full">
-      <div className="px-2 py-1 border-b border-border bg-muted/30 flex-shrink-0">
-        <h3 className="text-base sm:text-lg lg:text-[24px] font-bold text-foreground tracking-wide text-center">{title}</h3>
-      </div>
-      <div 
-        ref={containerRef}
-        className="flex-1 overflow-y-auto p-1 scrollbar-hide min-h-0"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-      >
-        {personnel.length === 0 ? (
-          <div className="text-center py-4 text-muted-foreground text-xs sm:text-sm">—</div>
-        ) : shouldUseAnimatePresence ? (
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={contentKey}
-              initial={currentPageVariant.initial}
-              animate={currentPageVariant.animate}
-              exit={currentPageVariant.exit}
-              className="space-y-0.5"
-              data-content-measure
-            >
-              {displayItems.map((p, index) => (
-                <PersonnelItemCompact key={`${p.id}-${index}`} item={p} onDelete={() => onDeletePersonnel(p.id)} onEdit={() => onEditPersonnel(p)} />
-              ))}
-            </motion.div>
-          </AnimatePresence>
-        ) : (
-          <div className="space-y-0.5" data-content-measure>
-            {displayItems.map((p, index) => (
-              <PersonnelItemCompact key={`${p.id}-${index}`} item={p} onDelete={() => onDeletePersonnel(p.id)} onEdit={() => onEditPersonnel(p)} />
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// Compact Personnel Item for 3-column layout
+// Personnel Item Component
 function PersonnelItemCompact({ 
-  item, 
-  onDelete,
-  onEdit 
+  item, onDelete, onEdit 
 }: { 
-  item: PersonnelStatus;
+  item: PersonnelStatus; 
   onDelete?: () => void;
   onEdit?: () => void;
 }) {
-  const formatDateRange = (start: string, end: string) => {
-    const startDate = format(parseISO(start), 'MMM d');
-    const endDate = format(parseISO(end), 'MMM d');
-    return `${startDate} - ${endDate}`;
+  const getStatusColor = (type: string) => {
+    switch (type) {
+      case 'CTO':
+      case 'FL': return 'bg-green-500';
+      case 'WFH': return 'bg-blue-500';
+      case 'TRAVEL': return 'bg-purple-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
+  const getStatusLabel = (type: string) => {
+    switch (type) {
+      case 'CTO': return 'CTO';
+      case 'FL': return 'FL';
+      case 'WFH': return 'WFH';
+      case 'TRAVEL': return 'TRAVEL';
+      default: return type;
+    }
   };
 
   return (
     <motion.div 
-      layout
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      className="flex flex-col py-1 px-2 hover:bg-muted/50 rounded group transition-colors"
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 10 }}
+      className="flex items-center gap-2 py-1.5 px-2 hover:bg-muted/50 rounded group"
     >
-      <div className="flex items-start justify-between gap-1">
-        <span className="font-medium text-sm sm:text-base lg:text-[18px] text-foreground truncate">{item.name}</span>
-        <div className="flex items-center gap-0.5 flex-shrink-0">
-          {onEdit && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={onEdit}
-            >
-              <Pencil className="h-3 w-3 text-muted-foreground" />
-            </Button>
-          )}
-          {onDelete && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={onDelete}
-            >
-              <Trash2 className="h-3 w-3 text-destructive" />
-            </Button>
-          )}
-        </div>
-      </div>
-      <span className="text-[10px] sm:text-xs lg:text-[12px] text-muted-foreground">
-        {formatDateRange(item.dateStart, item.dateEnd)}
-        {item.location && (
-          <span className="block truncate">{item.location}</span>
-        )}
+      <span className={`px-2 py-0.5 text-xs font-medium text-white rounded ${getStatusColor(item.type)}`}>
+        {getStatusLabel(item.type)}
       </span>
+      <span className="font-medium text-sm text-foreground flex-1 truncate">{item.name}</span>
+      <span className="text-xs text-muted-foreground">
+        {format(parseISO(item.dateStart), 'MMM d')}
+        {item.dateEnd !== item.dateStart && ` - ${format(parseISO(item.dateEnd), 'MMM d')}`}
+      </span>
+      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        {onEdit && (
+          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onEdit}>
+            <Pencil className="h-3 w-3 text-muted-foreground" />
+          </Button>
+        )}
+        {onDelete && (
+          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onDelete}>
+            <Trash2 className="h-3 w-3 text-destructive" />
+          </Button>
+        )}
+      </div>
     </motion.div>
+  );
+}
+
+// Personnel Status Panel Component
+function PersonnelStatusPanel({ onDeletePersonnel, onEditPersonnel }: { 
+  onDeletePersonnel?: (id: string) => void;
+  onEditPersonnel?: (personnel: PersonnelStatus) => void;
+}) {
+  const { personnel, settings } = useScheduleStore();
+  const today = new Date();
+  
+  const activePersonnel = personnel.filter(p => isDateInRange(p.dateStart, p.dateEnd, today));
+  const ctoPersonnel = activePersonnel.filter(p => p.type === 'CTO' || p.type === 'FL');
+  const wfhPersonnel = activePersonnel.filter(p => p.type === 'WFH');
+  const travelPersonnel = activePersonnel.filter(p => p.type === 'TRAVEL');
+
+  return (
+    <div className="bg-card rounded-lg border border-border shadow-sm flex flex-col min-h-0">
+      <div className="px-3 py-2 border-b border-border flex-shrink-0">
+        <h2 className="text-sm font-bold text-foreground tracking-wide">PERSONNEL STATUS</h2>
+        <p className="text-xs text-muted-foreground">Active Today</p>
+      </div>
+      
+      <div className="flex-1 overflow-y-auto min-h-0 p-2 space-y-3">
+        {ctoPersonnel.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <StatusDot color="#22c55e" size="sm" />
+              <span className="text-xs font-semibold text-muted-foreground">CTO / FL</span>
+            </div>
+            {ctoPersonnel.map((item) => (
+              <PersonnelItemCompact
+                key={item.id}
+                item={item}
+                onDelete={onDeletePersonnel ? () => onDeletePersonnel(item.id) : undefined}
+                onEdit={onEditPersonnel ? () => onEditPersonnel(item) : undefined}
+              />
+            ))}
+          </div>
+        )}
+        
+        {wfhPersonnel.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <StatusDot color="#3b82f6" size="sm" />
+              <span className="text-xs font-semibold text-muted-foreground">WFH</span>
+            </div>
+            {wfhPersonnel.map((item) => (
+              <PersonnelItemCompact
+                key={item.id}
+                item={item}
+                onDelete={onDeletePersonnel ? () => onDeletePersonnel(item.id) : undefined}
+                onEdit={onEditPersonnel ? () => onEditPersonnel(item) : undefined}
+              />
+            ))}
+          </div>
+        )}
+        
+        {travelPersonnel.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <StatusDot color="#a855f7" size="sm" />
+              <span className="text-xs font-semibold text-muted-foreground">IN TRAVEL</span>
+            </div>
+            {travelPersonnel.map((item) => (
+              <PersonnelItemCompact
+                key={item.id}
+                item={item}
+                onDelete={onDeletePersonnel ? () => onDeletePersonnel(item.id) : undefined}
+                onEdit={onEditPersonnel ? () => onEditPersonnel(item) : undefined}
+              />
+            ))}
+          </div>
+        )}
+        
+        {activePersonnel.length === 0 && (
+          <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+            No personnel status
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
 // Project Item Component
 function ProjectItem({ 
-  project, 
-  onIncrement, 
-  onDecrement,
-  onDelete,
-  onEdit 
+  project, onIncrement, onDecrement, onDelete, onEdit 
 }: { 
   project: Project;
   onIncrement: () => void;
@@ -1382,72 +1227,34 @@ function ProjectItem({
   onDelete?: () => void;
   onEdit?: () => void;
 }) {
-  const [isHovered, setIsHovered] = useState(false);
-  const [isFocused, setIsFocused] = useState(false);
-  const showControls = isHovered || isFocused;
-
   return (
     <motion.div 
-      layout
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      className="flex items-center justify-between py-2 px-2 sm:px-3 hover:bg-muted/50 rounded group transition-colors"
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 10 }}
+      className="flex items-center gap-2 py-2 px-2 hover:bg-muted/50 rounded group"
     >
-      <span className="font-medium text-sm sm:text-base lg:text-[20px] text-foreground truncate flex-1">{project.name}</span>
-      <div 
-        className="flex items-center gap-0.5 sm:gap-1 relative"
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
-      >
-        {/* Decrement button - hidden by default */}
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className={`h-7 w-7 transition-opacity duration-200 ${showControls ? 'opacity-100' : 'opacity-0'}`}
-          onClick={onDecrement}
-          disabled={project.number === 0}
-          tabIndex={showControls ? 0 : -1}
-        >
-          <Minus className="h-4 w-4" />
+      <span className="font-medium text-sm text-foreground flex-1 truncate">{project.name}</span>
+      
+      <div className="flex items-center gap-1">
+        <Button variant="outline" size="icon" className="h-6 w-6" onClick={onDecrement}>
+          <Minus className="h-3 w-3" />
         </Button>
-        
-        {/* Number display - always visible */}
-        <span className="w-10 text-center text-lg font-bold text-foreground tabular-nums select-none">
-          {project.number}
-        </span>
-        
-        {/* Increment button - hidden by default */}
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className={`h-7 w-7 transition-opacity duration-200 ${showControls ? 'opacity-100' : 'opacity-0'}`}
-          onClick={onIncrement}
-          tabIndex={showControls ? 0 : -1}
-        >
-          <Plus className="h-4 w-4" />
+        <span className="w-8 text-center font-bold text-lg">{project.count}</span>
+        <Button variant="outline" size="icon" className="h-6 w-6" onClick={onIncrement}>
+          <Plus className="h-3 w-3" />
         </Button>
-        
+      </div>
+      
+      <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
         {onEdit && (
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity ml-1"
-            onClick={onEdit}
-          >
-            <Pencil className="h-4 w-4 text-muted-foreground" />
+          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onEdit}>
+            <Pencil className="h-3 w-3 text-muted-foreground" />
           </Button>
         )}
         {onDelete && (
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity ml-1"
-            onClick={onDelete}
-          >
-            <Trash2 className="h-4 w-4 text-destructive" />
+          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onDelete}>
+            <Trash2 className="h-3 w-3 text-destructive" />
           </Button>
         )}
       </div>
@@ -1455,280 +1262,128 @@ function ProjectItem({
   );
 }
 
-// Project Request Panel
+// Project Request Panel Component
 function ProjectRequestPanel({ onDeleteProject, onEditProject }: { 
-  onDeleteProject: (id: string) => void;
-  onEditProject: (project: Project) => void;
+  onDeleteProject?: (id: string) => void;
+  onEditProject?: (project: Project) => void;
 }) {
-  const { projects, incrementProject, decrementProject, settings } = useScheduleStore();
-  const containerRef = useRef<HTMLDivElement>(null);
-  const transitionSpeed = getTransitionSpeed(settings.transitionSpeed, settings.customTransitionSeconds);
-
-  // Project item height: 20px font + padding = ~52px
-  const { currentItems, hasOverflow, currentPage, totalPages } = useOverflowTransition(
-    projects,
-    containerRef,
-    52,
-    settings
-  );
-
-  const isPaginationMode = ['fade', 'slideUp', 'slideLeft'].includes(settings.transitionStyle);
-
-  const pageVariants = {
-    fade: {
-      initial: { opacity: 0 },
-      animate: { opacity: 1, transition: { duration: transitionSpeed } },
-      exit: { opacity: 0, transition: { duration: transitionSpeed / 2 } },
-    },
-    slideUp: {
-      initial: { opacity: 0, y: 30 },
-      animate: { opacity: 1, y: 0, transition: { duration: transitionSpeed } },
-      exit: { opacity: 0, y: -30, transition: { duration: transitionSpeed / 2 } },
-    },
-    slideLeft: {
-      initial: { opacity: 0, x: 30 },
-      animate: { opacity: 1, x: 0, transition: { duration: transitionSpeed } },
-      exit: { opacity: 0, x: -30, transition: { duration: transitionSpeed / 2 } },
-    },
-    static: {
-      initial: { opacity: 1 },
-      animate: { opacity: 1 },
-      exit: { opacity: 1 },
-    },
-  };
-
-  const currentPageVariant = isPaginationMode && hasOverflow
-    ? pageVariants[settings.transitionStyle as 'fade' | 'slideUp' | 'slideLeft']
-    : pageVariants.static;
-
-  const renderItems = hasOverflow && isPaginationMode ? currentItems : projects;
-
-  // For gentle continuous scroll, duplicate items for seamless loop
-  const isGentleScroll = settings.transitionStyle === 'gentleContinuousScroll';
-  const displayItems = hasOverflow && isGentleScroll ? [...projects, ...projects] : renderItems;
-
-  // Use a stable key that changes when page content changes
-  // For continuous scroll modes, use a stable key to prevent re-renders
-  const contentKey = isGentleScroll 
-    ? 'continuous-scroll' 
-    : (isPaginationMode && hasOverflow 
-      ? `page-${currentPage}-${totalPages}-${currentItems.map(p => p.id).join('-')}` 
-      : `all-${projects.map(p => p.id).join('-')}`);
-  
-  // For gentle continuous scroll, don't use AnimatePresence to avoid interrupting the scroll
-  const shouldUseAnimatePresence = !isGentleScroll;
+  const { projects, incrementProjectCount, decrementProjectCount } = useScheduleStore();
 
   return (
-    <div className="bg-card border border-border rounded-lg h-full flex flex-col overflow-hidden">
-      <div className="px-2 py-1 border-b border-border bg-muted/30">
-        <h2 className="text-base sm:text-lg lg:text-[24px] font-bold text-foreground tracking-wide">PROJECT REQUEST</h2>
+    <div className="bg-card rounded-lg border border-border shadow-sm flex flex-col min-h-0">
+      <div className="px-3 py-2 border-b border-border flex-shrink-0">
+        <h2 className="text-sm font-bold text-foreground tracking-wide">PROJECT REQUESTS</h2>
+        <p className="text-xs text-muted-foreground">Track project requests</p>
       </div>
-      <div 
-        ref={containerRef}
-        className="flex-1 overflow-y-auto p-1 sm:p-1.5 scrollbar-hide"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-      >
+      
+      <div className="flex-1 overflow-y-auto min-h-0">
         {projects.length === 0 ? (
-          <div className="flex items-center justify-center h-16 text-muted-foreground text-sm sm:text-lg">
-            —
+          <div className="flex items-center justify-center h-full text-muted-foreground text-sm p-4">
+            No projects
           </div>
-        ) : shouldUseAnimatePresence ? (
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={contentKey}
-              initial={currentPageVariant.initial}
-              animate={currentPageVariant.animate}
-              exit={currentPageVariant.exit}
-              className="space-y-0.5"
-              data-content-measure
-            >
-              {displayItems.map((project, index) => (
-                <ProjectItem 
-                  key={`${project.id}-${index}`}
-                  project={project}
-                  onIncrement={() => incrementProject(project.id)}
-                  onDecrement={() => decrementProject(project.id)}
-                  onDelete={() => onDeleteProject(project.id)}
-                  onEdit={() => onEditProject(project)}
-                />
-              ))}
-            </motion.div>
-          </AnimatePresence>
         ) : (
-          <div className="space-y-0.5" data-content-measure>
-            {displayItems.map((project, index) => (
-              <ProjectItem 
-                key={`${project.id}-${index}`}
+          <AnimatePresence>
+            {projects.map((project) => (
+              <ProjectItem
+                key={project.id}
                 project={project}
-                onIncrement={() => incrementProject(project.id)}
-                onDecrement={() => decrementProject(project.id)}
-                onDelete={() => onDeleteProject(project.id)}
-                onEdit={() => onEditProject(project)}
+                onIncrement={() => incrementProjectCount(project.id)}
+                onDecrement={() => decrementProjectCount(project.id)}
+                onDelete={onDeleteProject ? () => onDeleteProject(project.id) : undefined}
+                onEdit={onEditProject ? () => onEditProject(project) : undefined}
               />
             ))}
-          </div>
+          </AnimatePresence>
         )}
       </div>
     </div>
   );
 }
-
 // Edit Event Modal
 function EditEventModal({ 
-  open, 
-  onClose,
-  event
+  open, onClose, event 
 }: { 
   open: boolean; 
-  onClose: () => void;
+  onClose: () => void; 
   event: ScheduleEvent | null;
 }) {
   const { updateEvent } = useScheduleStore();
   const [title, setTitle] = useState('');
   const [dateStarted, setDateStarted] = useState('');
+  const [dateEnd, setDateEnd] = useState('');
   const [timeStart, setTimeStart] = useState('');
   const [timeEnd, setTimeEnd] = useState('');
   const [details, setDetails] = useState('');
-  const [isAllDay, setIsAllDay] = useState(false);
-  const [error, setError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Populate form when event changes
   useEffect(() => {
     if (event) {
-      queueMicrotask(() => {
-        setTitle(event.title);
-        setDateStarted(event.dateStarted);
-        setTimeStart(event.timeStart);
-        setTimeEnd(event.timeEnd);
-        setDetails(event.details || '');
-        setIsAllDay(event.timeStart === '00:00' && event.timeEnd === '23:59');
-      });
+      setTitle(event.title);
+      setDateStarted(event.dateStarted);
+      setDateEnd(event.dateEnd);
+      setTimeStart(event.timeStart);
+      setTimeEnd(event.timeEnd);
+      setDetails(event.details || '');
     }
   }, [event]);
 
-  const handleAllDayChange = (checked: boolean) => {
-    setIsAllDay(checked);
-    if (checked) {
-      setTimeStart('00:00');
-      setTimeEnd('23:59');
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!event) return;
+    if (!event || !title || !dateStarted || !timeStart || !timeEnd) return;
     
-    if (isSubmitting) return;
-    setIsSubmitting(true);
-    
-    setError('');
-
-    if (!title.trim()) {
-      setError('Event title is required');
-      setIsSubmitting(false);
-      return;
-    }
-
-    if (!isAllDay && timeEnd <= timeStart) {
-      setError('End time must be after start time');
-      setIsSubmitting(false);
-      return;
-    }
-
-    updateEvent(event.id, {
-      title: title.trim(),
+    updateEvent({
+      ...event,
+      title,
       dateStarted,
+      dateEnd: dateEnd || dateStarted,
       timeStart,
       timeEnd,
-      details: details.trim() || undefined,
+      details
     });
-
     onClose();
-    setTimeout(() => setIsSubmitting(false), 500);
   };
-
-  if (!event) return null;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-xl">Edit Event</DialogTitle>
+          <DialogTitle>Edit Event</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="edit-event-title" className="text-base">Event Title *</Label>
-            <Input 
-              id="edit-event-title" 
-              value={title} 
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Enter event title"
-              className="text-base"
-            />
+            <Label htmlFor="title">Event Title</Label>
+            <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} required />
           </div>
           
-          <div className="space-y-2">
-            <Label htmlFor="edit-event-date" className="text-base">Date Started *</Label>
-            <Input 
-              id="edit-event-date" 
-              type="date" 
-              value={dateStarted} 
-              onChange={(e) => setDateStarted(e.target.value)}
-              className="text-base"
-            />
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="edit-all-day" 
-              checked={isAllDay}
-              onCheckedChange={(checked) => handleAllDayChange(checked as boolean)}
-            />
-            <Label htmlFor="edit-all-day" className="text-base cursor-pointer">All Day Event</Label>
-          </div>
-          
-          {!isAllDay && (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-time-start" className="text-base">Time Start *</Label>
-                <Input 
-                  id="edit-time-start" 
-                  type="time" 
-                  value={timeStart} 
-                  onChange={(e) => setTimeStart(e.target.value)}
-                  className="text-base"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-time-end" className="text-base">Time End *</Label>
-                <Input 
-                  id="edit-time-end" 
-                  type="time" 
-                  value={timeEnd} 
-                  onChange={(e) => setTimeEnd(e.target.value)}
-                  className="text-base"
-                />
-              </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="dateStarted">Start Date</Label>
+              <Input id="dateStarted" type="date" value={dateStarted} onChange={(e) => setDateStarted(e.target.value)} required />
             </div>
-          )}
+            <div className="space-y-2">
+              <Label htmlFor="dateEnd">End Date</Label>
+              <Input id="dateEnd" type="date" value={dateEnd} onChange={(e) => setDateEnd(e.target.value)} />
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="timeStart">Start Time</Label>
+              <Input id="timeStart" type="time" value={timeStart} onChange={(e) => setTimeStart(e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="timeEnd">End Time</Label>
+              <Input id="timeEnd" type="time" value={timeEnd} onChange={(e) => setTimeEnd(e.target.value)} required />
+            </div>
+          </div>
           
           <div className="space-y-2">
-            <Label htmlFor="edit-event-details" className="text-base">Details (Optional)</Label>
-            <Input 
-              id="edit-event-details" 
-              value={details} 
-              onChange={(e) => setDetails(e.target.value)}
-              placeholder="Enter event details"
-              className="text-base"
-            />
+            <Label htmlFor="details">Details (Optional)</Label>
+            <Input id="details" value={details} onChange={(e) => setDetails(e.target.value)} />
           </div>
           
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} className="text-base">Cancel</Button>
-            <Button type="submit" className="text-base" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Save Changes'}</Button>
+            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+            <Button type="submit">Save Changes</Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -1737,152 +1392,76 @@ function EditEventModal({
 }
 
 // Add Event Modal
-function AddEventModal({ 
-  open, 
-  onClose 
-}: { 
-  open: boolean; 
-  onClose: () => void;
-}) {
+function AddEventModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { addEvent } = useScheduleStore();
   const [title, setTitle] = useState('');
   const [dateStarted, setDateStarted] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [dateEnd, setDateEnd] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [timeStart, setTimeStart] = useState('09:00');
   const [timeEnd, setTimeEnd] = useState('10:00');
   const [details, setDetails] = useState('');
-  const [isAllDay, setIsAllDay] = useState(false);
-  const [error, setError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Handler for all-day toggle
-  const handleAllDayChange = (checked: boolean) => {
-    setIsAllDay(checked);
-    if (checked) {
-      setTimeStart('00:00');
-      setTimeEnd('23:59');
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!title || !dateStarted || !timeStart || !timeEnd) return;
     
-    // Prevent double submission
-    if (isSubmitting) return;
-    setIsSubmitting(true);
-    
-    setError('');
-
-    if (!title.trim()) {
-      setError('Event title is required');
-      setIsSubmitting(false);
-      return;
-    }
-
-    if (!isAllDay && timeEnd <= timeStart) {
-      setError('End time must be after start time');
-      setIsSubmitting(false);
-      return;
-    }
-
     addEvent({
-      title: title.trim(),
+      id: Date.now().toString(),
+      title,
       dateStarted,
+      dateEnd: dateEnd || dateStarted,
       timeStart,
       timeEnd,
-      details: details.trim() || undefined,
+      details
     });
-
-    // Reset form but keep modal open
-    setTitle('');
-    setDateStarted(format(new Date(), 'yyyy-MM-dd'));
-    setTimeStart('09:00');
-    setTimeEnd('10:00');
-    setDetails('');
-    setIsAllDay(false);
     
-    // Small delay to prevent double submission
-    setTimeout(() => setIsSubmitting(false), 500);
+    setTitle('');
+    setDetails('');
+    onClose();
   };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-xl">Add Event</DialogTitle>
+          <DialogTitle>Add New Event</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="event-title" className="text-base">Event Title *</Label>
-            <Input 
-              id="event-title" 
-              value={title} 
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Enter event title"
-              className="text-base"
-            />
+            <Label htmlFor="title">Event Title</Label>
+            <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Enter event title" required />
           </div>
           
-          <div className="space-y-2">
-            <Label htmlFor="event-date" className="text-base">Date Started *</Label>
-            <Input 
-              id="event-date" 
-              type="date" 
-              value={dateStarted} 
-              onChange={(e) => setDateStarted(e.target.value)}
-              className="text-base"
-            />
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="all-day" 
-              checked={isAllDay}
-              onCheckedChange={(checked) => handleAllDayChange(checked as boolean)}
-            />
-            <Label htmlFor="all-day" className="text-base cursor-pointer">All Day Event</Label>
-          </div>
-          
-          {!isAllDay && (
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="time-start" className="text-base">Time Start *</Label>
-                <Input 
-                  id="time-start" 
-                  type="time" 
-                  value={timeStart} 
-                  onChange={(e) => setTimeStart(e.target.value)}
-                  className="text-base"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="time-end" className="text-base">Time End *</Label>
-                <Input 
-                  id="time-end" 
-                  type="time" 
-                  value={timeEnd} 
-                  onChange={(e) => setTimeEnd(e.target.value)}
-                  className="text-base"
-                />
-              </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="dateStarted">Start Date</Label>
+              <Input id="dateStarted" type="date" value={dateStarted} onChange={(e) => setDateStarted(e.target.value)} required />
             </div>
-          )}
+            <div className="space-y-2">
+              <Label htmlFor="dateEnd">End Date</Label>
+              <Input id="dateEnd" type="date" value={dateEnd} onChange={(e) => setDateEnd(e.target.value)} />
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="timeStart">Start Time</Label>
+              <Input id="timeStart" type="time" value={timeStart} onChange={(e) => setTimeStart(e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="timeEnd">End Time</Label>
+              <Input id="timeEnd" type="time" value={timeEnd} onChange={(e) => setTimeEnd(e.target.value)} required />
+            </div>
+          </div>
           
           <div className="space-y-2">
-            <Label htmlFor="event-details" className="text-base">Details (Optional)</Label>
-            <Input 
-              id="event-details" 
-              value={details} 
-              onChange={(e) => setDetails(e.target.value)}
-              placeholder="Enter event details"
-              className="text-base"
-            />
+            <Label htmlFor="details">Details (Optional)</Label>
+            <Input id="details" value={details} onChange={(e) => setDetails(e.target.value)} placeholder="Additional details" />
           </div>
           
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} className="text-base">Cancel</Button>
-            <Button type="submit" className="text-base" disabled={isSubmitting}>{isSubmitting ? 'Adding...' : 'Add Event'}</Button>
+            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+            <Button type="submit">Add Event</Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -1890,124 +1469,64 @@ function AddEventModal({
   );
 }
 
-// Add Personnel Modal (CTO/FL, WFH, Travel)
-function AddPersonnelModal({ 
-  open, 
-  onClose, 
-  type 
-}: { 
-  open: boolean; 
-  onClose: () => void;
-  type: 'CTO' | 'FL' | 'WFH' | 'TRAVEL';
-}) {
+// Add Personnel Modal
+function AddPersonnelModal({ open, onClose, type }: { open: boolean; onClose: () => void; type: string }) {
   const { addPersonnelStatus } = useScheduleStore();
   const [name, setName] = useState('');
   const [dateStart, setDateStart] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [dateEnd, setDateEnd] = useState(format(new Date(), 'yyyy-MM-dd'));
-  const [location, setLocation] = useState('');
-  const [error, setError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const title = type === 'TRAVEL' ? 'Add In Travel' : `Add ${type === 'CTO' || type === 'FL' ? 'CTO / FL' : 'WFH'}`;
+  const getTypeLabel = () => {
+    switch (type) {
+      case 'CTO': return 'CTO / FL';
+      case 'WFH': return 'WFH';
+      case 'TRAVEL': return 'In Travel';
+      default: return type;
+    }
+  };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!name || !dateStart) return;
     
-    // Prevent double submission
-    if (isSubmitting) return;
-    setIsSubmitting(true);
-    
-    setError('');
-
-    if (!name.trim()) {
-      setError('Personnel name is required');
-      setIsSubmitting(false);
-      return;
-    }
-
-    if (type === 'TRAVEL' && !location.trim()) {
-      setError('Location is required');
-      setIsSubmitting(false);
-      return;
-    }
-
     addPersonnelStatus({
-      name: name.trim(),
-      type,
+      id: Date.now().toString(),
+      name,
+      type: type as 'CTO' | 'FL' | 'WFH' | 'TRAVEL',
       dateStart,
-      dateEnd,
-      location: type === 'TRAVEL' ? location.trim() : undefined,
+      dateEnd: dateEnd || dateStart
     });
-
-    // Reset form but keep modal open
-    setName('');
-    setDateStart(format(new Date(), 'yyyy-MM-dd'));
-    setDateEnd(format(new Date(), 'yyyy-MM-dd'));
-    setLocation('');
     
-    // Small delay to prevent double submission
-    setTimeout(() => setIsSubmitting(false), 500);
+    setName('');
+    onClose();
   };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-xl">{title}</DialogTitle>
+          <DialogTitle>Add {getTypeLabel()}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="personnel-name" className="text-base">Personnel Name *</Label>
-            <Input 
-              id="personnel-name" 
-              value={name} 
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Enter name"
-              className="text-base"
-            />
+            <Label htmlFor="name">Name</Label>
+            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter name" required />
           </div>
           
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="date-start" className="text-base">Date Start *</Label>
-              <Input 
-                id="date-start" 
-                type="date" 
-                value={dateStart} 
-                onChange={(e) => setDateStart(e.target.value)}
-                className="text-base"
-              />
+              <Label htmlFor="dateStart">Start Date</Label>
+              <Input id="dateStart" type="date" value={dateStart} onChange={(e) => setDateStart(e.target.value)} required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="date-end" className="text-base">Date End *</Label>
-              <Input 
-                id="date-end" 
-                type="date" 
-                value={dateEnd} 
-                onChange={(e) => setDateEnd(e.target.value)}
-                className="text-base"
-              />
+              <Label htmlFor="dateEnd">End Date</Label>
+              <Input id="dateEnd" type="date" value={dateEnd} onChange={(e) => setDateEnd(e.target.value)} />
             </div>
           </div>
           
-          {type === 'TRAVEL' && (
-            <div className="space-y-2">
-              <Label htmlFor="location" className="text-base">Location *</Label>
-              <Input 
-                id="location" 
-                value={location} 
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="Enter location"
-                className="text-base"
-              />
-            </div>
-          )}
-          
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} className="text-base">Cancel</Button>
-            <Button type="submit" className="text-base" disabled={isSubmitting}>{isSubmitting ? 'Adding...' : 'Add'}</Button>
+            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+            <Button type="submit">Add</Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -2016,90 +1535,39 @@ function AddPersonnelModal({
 }
 
 // Add Project Modal
-function AddProjectModal({ 
-  open, 
-  onClose 
-}: { 
-  open: boolean; 
-  onClose: () => void;
-}) {
+function AddProjectModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { addProject } = useScheduleStore();
   const [name, setName] = useState('');
-  const [number, setNumber] = useState('0');
-  const [error, setError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!name) return;
     
-    // Prevent double submission
-    if (isSubmitting) return;
-    setIsSubmitting(true);
-    
-    setError('');
-
-    if (!name.trim()) {
-      setError('Project name is required');
-      setIsSubmitting(false);
-      return;
-    }
-
-    const numValue = parseInt(number, 10);
-    if (isNaN(numValue) || numValue < 0) {
-      setError('Please enter a valid number');
-      setIsSubmitting(false);
-      return;
-    }
-
     addProject({
-      name: name.trim(),
-      number: numValue,
+      id: Date.now().toString(),
+      name,
+      count: 0
     });
-
-    // Reset form but keep modal open
-    setName('');
-    setNumber('0');
     
-    // Small delay to prevent double submission
-    setTimeout(() => setIsSubmitting(false), 500);
+    setName('');
+    onClose();
   };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-xl">Add Project</DialogTitle>
+          <DialogTitle>Add New Project</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="project-name" className="text-base">Project Name *</Label>
-            <Input 
-              id="project-name" 
-              value={name} 
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Enter project name"
-              className="text-base"
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="project-number" className="text-base">Number *</Label>
-            <Input 
-              id="project-number" 
-              type="number" 
-              min="0"
-              value={number} 
-              onChange={(e) => setNumber(e.target.value)}
-              placeholder="Enter number"
-              className="text-base"
-            />
+            <Label htmlFor="name">Project Name</Label>
+            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter project name" required />
           </div>
           
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} className="text-base">Cancel</Button>
-            <Button type="submit" className="text-base" disabled={isSubmitting}>{isSubmitting ? 'Adding...' : 'Add Project'}</Button>
+            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+            <Button type="submit">Add Project</Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -2108,130 +1576,59 @@ function AddProjectModal({
 }
 
 // Edit Personnel Modal
-function EditPersonnelModal({ 
-  open, 
-  onClose,
-  personnel
-}: { 
-  open: boolean; 
-  onClose: () => void;
-  personnel: PersonnelStatus | null;
-}) {
+function EditPersonnelModal({ open, onClose, personnel }: { open: boolean; onClose: () => void; personnel: PersonnelStatus | null }) {
   const { updatePersonnelStatus } = useScheduleStore();
   const [name, setName] = useState('');
   const [dateStart, setDateStart] = useState('');
   const [dateEnd, setDateEnd] = useState('');
-  const [location, setLocation] = useState('');
-  const [error, setError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Populate form when personnel changes
   useEffect(() => {
     if (personnel) {
-      queueMicrotask(() => {
-        setName(personnel.name);
-        setDateStart(personnel.dateStart);
-        setDateEnd(personnel.dateEnd);
-        setLocation(personnel.location || '');
-      });
+      setName(personnel.name);
+      setDateStart(personnel.dateStart);
+      setDateEnd(personnel.dateEnd);
     }
   }, [personnel]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!personnel) return;
+    if (!personnel || !name || !dateStart) return;
     
-    if (isSubmitting) return;
-    setIsSubmitting(true);
-    
-    setError('');
-
-    if (!name.trim()) {
-      setError('Personnel name is required');
-      setIsSubmitting(false);
-      return;
-    }
-
-    if (personnel.type === 'TRAVEL' && !location.trim()) {
-      setError('Location is required');
-      setIsSubmitting(false);
-      return;
-    }
-
-    updatePersonnelStatus(personnel.id, {
-      name: name.trim(),
+    updatePersonnelStatus({
+      ...personnel,
+      name,
       dateStart,
-      dateEnd,
-      location: personnel.type === 'TRAVEL' ? location.trim() : undefined,
+      dateEnd: dateEnd || dateStart
     });
-
     onClose();
-    setTimeout(() => setIsSubmitting(false), 500);
   };
-
-  if (!personnel) return null;
-
-  const title = personnel.type === 'TRAVEL' ? 'Edit In Travel' : `Edit ${personnel.type === 'CTO' || personnel.type === 'FL' ? 'CTO / FL' : 'WFH'}`;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-xl">{title}</DialogTitle>
+          <DialogTitle>Edit Personnel</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="edit-personnel-name" className="text-base">Personnel Name *</Label>
-            <Input 
-              id="edit-personnel-name" 
-              value={name} 
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Enter name"
-              className="text-base"
-            />
+            <Label htmlFor="name">Name</Label>
+            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
           </div>
           
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-date-start" className="text-base">Date Start *</Label>
-              <Input 
-                id="edit-date-start" 
-                type="date" 
-                value={dateStart} 
-                onChange={(e) => setDateStart(e.target.value)}
-                className="text-base"
-              />
+              <Label htmlFor="dateStart">Start Date</Label>
+              <Input id="dateStart" type="date" value={dateStart} onChange={(e) => setDateStart(e.target.value)} required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-date-end" className="text-base">Date End *</Label>
-              <Input 
-                id="edit-date-end" 
-                type="date" 
-                value={dateEnd} 
-                onChange={(e) => setDateEnd(e.target.value)}
-                className="text-base"
-              />
+              <Label htmlFor="dateEnd">End Date</Label>
+              <Input id="dateEnd" type="date" value={dateEnd} onChange={(e) => setDateEnd(e.target.value)} />
             </div>
           </div>
           
-          {personnel.type === 'TRAVEL' && (
-            <div className="space-y-2">
-              <Label htmlFor="edit-location" className="text-base">Location *</Label>
-              <Input 
-                id="edit-location" 
-                value={location} 
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="Enter location"
-                className="text-base"
-              />
-            </div>
-          )}
-          
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} className="text-base">Cancel</Button>
-            <Button type="submit" className="text-base" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Save Changes'}</Button>
+            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+            <Button type="submit">Save Changes</Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -2240,444 +1637,385 @@ function EditPersonnelModal({
 }
 
 // Edit Project Modal
-function EditProjectModal({ 
-  open, 
-  onClose,
-  project
-}: { 
-  open: boolean; 
-  onClose: () => void;
-  project: Project | null;
-}) {
+function EditProjectModal({ open, onClose, project }: { open: boolean; onClose: () => void; project: Project | null }) {
   const { updateProject } = useScheduleStore();
   const [name, setName] = useState('');
-  const [number, setNumber] = useState('0');
-  const [error, setError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Populate form when project changes
   useEffect(() => {
     if (project) {
-      queueMicrotask(() => {
-        setName(project.name);
-        setNumber(project.number.toString());
-      });
+      setName(project.name);
     }
   }, [project]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!project) return;
+    if (!project || !name) return;
     
-    if (isSubmitting) return;
-    setIsSubmitting(true);
-    
-    setError('');
-
-    if (!name.trim()) {
-      setError('Project name is required');
-      setIsSubmitting(false);
-      return;
-    }
-
-    const numValue = parseInt(number, 10);
-    if (isNaN(numValue) || numValue < 0) {
-      setError('Please enter a valid number');
-      setIsSubmitting(false);
-      return;
-    }
-
-    updateProject(project.id, {
-      name: name.trim(),
-      number: numValue,
+    updateProject({
+      ...project,
+      name
     });
-
     onClose();
-    setTimeout(() => setIsSubmitting(false), 500);
   };
-
-  if (!project) return null;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-xl">Edit Project</DialogTitle>
+          <DialogTitle>Edit Project</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="edit-project-name" className="text-base">Project Name *</Label>
-            <Input 
-              id="edit-project-name" 
-              value={name} 
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Enter project name"
-              className="text-base"
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="edit-project-number" className="text-base">Number *</Label>
-            <Input 
-              id="edit-project-number" 
-              type="number" 
-              min="0"
-              value={number} 
-              onChange={(e) => setNumber(e.target.value)}
-              placeholder="Enter number"
-              className="text-base"
-            />
+            <Label htmlFor="name">Project Name</Label>
+            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
           </div>
           
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} className="text-base">Cancel</Button>
-            <Button type="submit" className="text-base" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Save Changes'}</Button>
+            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+            <Button type="submit">Save Changes</Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
   );
 }
-
 // Settings Modal
-function SettingsModal({ 
-  open, 
-  onClose 
-}: { 
-  open: boolean; 
-  onClose: () => void;
-}) {
-  const { 
-    settings, 
-    updateSettings, 
-    updateStatusColors, 
-    setTheme, 
-    setPassword, 
-    setPasswordHint, 
-    setRecoveryEmail, 
-    togglePasswordEnabled,
-    resetFailedAttempts,
-    setLockoutUntil
-  } = useScheduleStore();
-  
-  const [passwordInput, setPasswordInput] = useState(settings.password);
-  const [passwordHintInput, setPasswordHintInput] = useState(settings.passwordHint);
-  const [recoveryEmailInput, setRecoveryEmailInput] = useState(settings.recoveryEmail);
-  const [customSeconds, setCustomSeconds] = useState(settings.customTransitionSeconds.toString());
+function SettingsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { settings, updateSettings, resetSettings } = useScheduleStore();
+  const [localSettings, setLocalSettings] = useState(settings);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPin, setShowPin] = useState(false);
+
+  useEffect(() => {
+    setLocalSettings(settings);
+  }, [settings, open]);
 
   const handleSave = () => {
-    updateSettings({
-      customTransitionSeconds: parseInt(customSeconds, 10) || 3,
-    });
-    // Save password settings
-    setPassword(passwordInput);
-    setPasswordHint(passwordHintInput);
-    setRecoveryEmail(recoveryEmailInput);
+    updateSettings(localSettings);
     onClose();
   };
 
-  const handleColorChange = (status: keyof typeof settings.statusColors, color: string) => {
-    updateStatusColors({ [status]: color });
+  const handleReset = () => {
+    resetSettings();
+    setLocalSettings({
+      pinEnabled: false,
+      pin: '',
+      passwordEnabled: false,
+      password: '',
+      passwordHint: '',
+      recoveryEmail: '',
+      failedAttempts: 0,
+      lockoutUntil: null,
+      theme: 'system',
+      transitionStyle: 'static',
+      transitionSpeed: 'normal',
+      smoothScrollEnabled: true,
+      customTransitionSeconds: 3,
+      statusColors: {
+        upcoming: '#3b82f6',
+        ongoing: '#22c55e',
+        completed: '#6b7280'
+      }
+    });
   };
-
-  const handleResetFailedAttempts = () => {
-    resetFailedAttempts();
-    setLockoutUntil(null);
-  };
-
-  const transitionStyles: TransitionStyle[] = [
-    'static', 'fade', 'slideUp', 'slideLeft', 'verticalAutoScroll', 'gentleContinuousScroll'
-  ];
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-xl">
-            <Settings className="h-5 w-5" />
-            Settings
-          </DialogTitle>
+          <DialogTitle>Settings</DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-6 py-4">
-          {/* Theme Mode */}
+        <div className="space-y-6">
+          {/* Theme Settings */}
           <div className="space-y-3">
-            <Label className="text-base">Theme Mode</Label>
+            <h3 className="text-sm font-semibold text-foreground">Theme</h3>
             <div className="flex items-center gap-4">
-              <Button 
-                variant={settings.theme === 'light' ? 'default' : 'outline'}
-                onClick={() => setTheme('light')}
-                className="text-base px-6"
+              <Select 
+                value={localSettings.theme} 
+                onValueChange={(value) => setLocalSettings({ ...localSettings, theme: value as 'light' | 'dark' | 'system' })}
               >
-                Light Mode
-              </Button>
-              <Button 
-                variant={settings.theme === 'dark' ? 'default' : 'outline'}
-                onClick={() => setTheme('dark')}
-                className="text-base px-6"
-              >
-                Dark Mode
-              </Button>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="light">Light</SelectItem>
+                  <SelectItem value="dark">Dark</SelectItem>
+                  <SelectItem value="system">System</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
           <Separator />
 
-          {/* Transition Style */}
+          {/* PIN Protection */}
           <div className="space-y-3">
-            <Label className="text-base">Transition Style</Label>
-            <Select 
-              value={settings.transitionStyle} 
-              onValueChange={(value: TransitionStyle) => updateSettings({ transitionStyle: value })}
-            >
-              <SelectTrigger className="text-base">
-                <SelectValue placeholder="Select transition style" />
-              </SelectTrigger>
-              <SelectContent>
-                {transitionStyles.map((style) => (
-                  <SelectItem key={style} value={style} className="text-base">
-                    {style.charAt(0).toUpperCase() + style.slice(1).replace(/([A-Z])/g, ' $1')}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Transition Speed */}
-          <div className="space-y-3">
-            <Label className="text-base">Transition Speed</Label>
-            <Select 
-              value={settings.transitionSpeed} 
-              onValueChange={(value: 'verySlow' | 'slow' | 'normal' | 'fast' | 'custom') => 
-                updateSettings({ transitionSpeed: value })
-              }
-            >
-              <SelectTrigger className="text-base">
-                <SelectValue placeholder="Select speed" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="verySlow" className="text-base">Very Slow</SelectItem>
-                <SelectItem value="slow" className="text-base">Slow</SelectItem>
-                <SelectItem value="normal" className="text-base">Normal</SelectItem>
-                <SelectItem value="fast" className="text-base">Fast</SelectItem>
-                <SelectItem value="custom" className="text-base">Custom</SelectItem>
-              </SelectContent>
-            </Select>
-            {settings.transitionSpeed === 'custom' && (
-              <div className="flex items-center gap-2">
-                <Input 
-                  type="number" 
-                  min="1" 
-                  max="60"
-                  value={customSeconds}
-                  onChange={(e) => setCustomSeconds(e.target.value)}
-                  placeholder="Seconds"
-                  className="text-base w-24"
-                />
-                <span className="text-muted-foreground">seconds</span>
+            <h3 className="text-sm font-semibold text-foreground">PIN Protection</h3>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="pin-enabled">Enable PIN</Label>
+              <Switch 
+                id="pin-enabled"
+                checked={localSettings.pinEnabled} 
+                onCheckedChange={(checked) => setLocalSettings({ ...localSettings, pinEnabled: checked })} 
+              />
+            </div>
+            {localSettings.pinEnabled && (
+              <div className="space-y-2">
+                <Label htmlFor="pin">4-Digit PIN</Label>
+                <div className="relative">
+                  <Input 
+                    id="pin" 
+                    type={showPin ? "text" : "password"}
+                    value={localSettings.pin || ''} 
+                    onChange={(e) => setLocalSettings({ ...localSettings, pin: e.target.value.replace(/\D/g, '').slice(0, 4) })}
+                    placeholder="Enter 4-digit PIN"
+                    maxLength={4}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full"
+                    onClick={() => setShowPin(!showPin)}
+                  >
+                    {showPin ? <X className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                  </Button>
+                </div>
               </div>
             )}
-          </div>
-
-          <Separator />
-
-          {/* Status Colors */}
-          <div className="space-y-4">
-            <Label className="text-base">Status Colors</Label>
-            <div className="grid grid-cols-3 gap-6">
-              <div className="space-y-2">
-                <Label className="text-sm text-muted-foreground">Upcoming</Label>
-                <Input 
-                  type="color" 
-                  value={settings.statusColors.upcoming}
-                  onChange={(e) => handleColorChange('upcoming', e.target.value)}
-                  className="h-12 w-full"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm text-muted-foreground">Ongoing</Label>
-                <Input 
-                  type="color" 
-                  value={settings.statusColors.ongoing}
-                  onChange={(e) => handleColorChange('ongoing', e.target.value)}
-                  className="h-12 w-full"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm text-muted-foreground">Completed</Label>
-                <Input 
-                  type="color" 
-                  value={settings.statusColors.completed}
-                  onChange={(e) => handleColorChange('completed', e.target.value)}
-                  className="h-12 w-full"
-                />
-              </div>
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Smooth Scroll */}
-          <div className="flex items-center justify-between">
-            <Label className="text-base">Enable Smooth Scrolling</Label>
-            <Switch 
-              checked={settings.smoothScrollEnabled}
-              onCheckedChange={(checked) => updateSettings({ smoothScrollEnabled: checked })}
-            />
           </div>
 
           <Separator />
 
           {/* Password Protection */}
-          <div className="space-y-4">
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-foreground">Password Protection</h3>
             <div className="flex items-center justify-between">
-              <Label className="flex items-center gap-2 text-base">
-                <Lock className="h-4 w-4" />
-                Password Protection
-              </Label>
+              <Label htmlFor="password-enabled">Enable Password</Label>
               <Switch 
-                checked={settings.passwordEnabled}
-                onCheckedChange={togglePasswordEnabled}
+                id="password-enabled"
+                checked={localSettings.passwordEnabled} 
+                onCheckedChange={(checked) => setLocalSettings({ ...localSettings, passwordEnabled: checked })} 
               />
             </div>
-            {settings.passwordEnabled && (
-              <div className="space-y-4">
-                {/* Password */}
+            {localSettings.passwordEnabled && (
+              <>
                 <div className="space-y-2">
-                  <Label className="text-sm">Password</Label>
-                  <Input 
-                    type="password"
-                    value={passwordInput}
-                    onChange={(e) => setPasswordInput(e.target.value)}
-                    placeholder="Enter your password"
-                    className="text-base"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Password can be any combination of letters and numbers (no limit)
-                  </p>
-                </div>
-                
-                {/* Password Hint */}
-                <div className="space-y-2">
-                  <Label className="text-sm">Password Hint (shown after 3 failed attempts)</Label>
-                  <Input 
-                    type="text"
-                    value={passwordHintInput}
-                    onChange={(e) => setPasswordHintInput(e.target.value)}
-                    placeholder="e.g., My favorite color + birth year"
-                    className="text-base"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    A hint to help you remember your password
-                  </p>
-                </div>
-                
-                {/* Recovery Email */}
-                <div className="space-y-2">
-                  <Label className="text-sm">Recovery Email</Label>
-                  <Input 
-                    type="email"
-                    value={recoveryEmailInput}
-                    onChange={(e) => setRecoveryEmailInput(e.target.value)}
-                    placeholder="admin@example.com"
-                    className="text-base"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Email to receive recovery requests and lockout notifications
-                  </p>
-                </div>
-                
-                {/* Security Status */}
-                <div className="bg-muted/30 p-3 rounded-lg space-y-2">
-                  <Label className="text-sm font-medium">Security Status</Label>
-                  <div className="flex items-center justify-between text-sm">
-                    <span>Failed Attempts:</span>
-                    <span className={settings.failedAttempts > 0 ? 'text-amber-600' : 'text-green-600'}>
-                      {settings.failedAttempts} / 5
-                    </span>
-                  </div>
-                  {settings.lockoutUntil && new Date(settings.lockoutUntil) > new Date() && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span>Lockout Active:</span>
-                      <span className="text-destructive">
-                        Until {new Date(settings.lockoutUntil).toLocaleTimeString()}
-                      </span>
-                    </div>
-                  )}
-                  {(settings.failedAttempts > 0 || settings.lockoutUntil) && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={handleResetFailedAttempts}
-                      className="w-full mt-2"
+                  <Label htmlFor="password">Password</Label>
+                  <div className="relative">
+                    <Input 
+                      id="password" 
+                      type={showPassword ? "text" : "password"}
+                      value={localSettings.password || ''} 
+                      onChange={(e) => setLocalSettings({ ...localSettings, password: e.target.value })}
+                      placeholder="Enter password"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-0 top-0 h-full"
+                      onClick={() => setShowPassword(!showPassword)}
                     >
-                      Reset Failed Attempts & Remove Lockout
+                      {showPassword ? <X className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
                     </Button>
-                  )}
+                  </div>
                 </div>
-                
-                <p className="text-xs text-muted-foreground">
-                  Settings will be saved when you click Save Settings
-                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="password-hint">Password Hint</Label>
+                  <Input 
+                    id="password-hint" 
+                    value={localSettings.passwordHint || ''} 
+                    onChange={(e) => setLocalSettings({ ...localSettings, passwordHint: e.target.value })}
+                    placeholder="Enter a hint"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="recovery-email">Recovery Email</Label>
+                  <Input 
+                    id="recovery-email" 
+                    type="email"
+                    value={localSettings.recoveryEmail || ''} 
+                    onChange={(e) => setLocalSettings({ ...localSettings, recoveryEmail: e.target.value })}
+                    placeholder="Enter recovery email"
+                  />
+                </div>
+              </>
+            )}
+          </div>
+
+          <Separator />
+
+          {/* Transition Settings */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-foreground">Transition Effects</h3>
+            <div className="space-y-2">
+              <Label htmlFor="transition-style">Transition Style</Label>
+              <Select 
+                value={localSettings.transitionStyle} 
+                onValueChange={(value) => setLocalSettings({ ...localSettings, transitionStyle: value as TransitionStyle })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="static">Static</SelectItem>
+                  <SelectItem value="fade">Fade</SelectItem>
+                  <SelectItem value="slideUp">Slide Up</SelectItem>
+                  <SelectItem value="slideLeft">Slide Left</SelectItem>
+                  <SelectItem value="verticalAutoScroll">Vertical Auto Scroll</SelectItem>
+                  <SelectItem value="gentleContinuousScroll">Gentle Continuous Scroll</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="transition-speed">Transition Speed</Label>
+              <Select 
+                value={localSettings.transitionSpeed} 
+               onValueChange={(value) => 
+  updateSettings({ transitionSpeed: value as TransitionSpeed })
+}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="verySlow">Very Slow</SelectItem>
+                  <SelectItem value="slow">Slow</SelectItem>
+                  <SelectItem value="normal">Normal</SelectItem>
+                  <SelectItem value="fast">Fast</SelectItem>
+                  <SelectItem value="custom">Custom</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {localSettings.transitionSpeed === 'custom' && (
+              <div className="space-y-2">
+                <Label htmlFor="custom-seconds">Custom Speed (seconds)</Label>
+                <Input 
+                  id="custom-seconds" 
+                  type="number"
+                  min={0.5}
+                  max={10}
+                  step={0.5}
+                  value={localSettings.customTransitionSeconds} 
+                  onChange={(e) => setLocalSettings({ ...localSettings, customTransitionSeconds: parseFloat(e.target.value) || 3 })}
+                />
               </div>
             )}
+            
+            <div className="flex items-center justify-between">
+              <Label htmlFor="smooth-scroll">Smooth Scroll</Label>
+              <Switch 
+                id="smooth-scroll"
+                checked={localSettings.smoothScrollEnabled} 
+                onCheckedChange={(checked) => setLocalSettings({ ...localSettings, smoothScrollEnabled: checked })} 
+              />
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Status Colors */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-semibold text-foreground">Status Colors</h3>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="upcoming-color">Upcoming</Label>
+                <Input 
+                  id="upcoming-color" 
+                  type="color"
+                  value={localSettings.statusColors?.upcoming || '#3b82f6'} 
+                  onChange={(e) => setLocalSettings({ 
+                    ...localSettings, 
+                    statusColors: { ...localSettings.statusColors, upcoming: e.target.value }
+                  })}
+                  className="h-10"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ongoing-color">Ongoing</Label>
+                <Input 
+                  id="ongoing-color" 
+                  type="color"
+                  value={localSettings.statusColors?.ongoing || '#22c55e'} 
+                  onChange={(e) => setLocalSettings({ 
+                    ...localSettings, 
+                    statusColors: { ...localSettings.statusColors, ongoing: e.target.value }
+                  })}
+                  className="h-10"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="completed-color">Completed</Label>
+                <Input 
+                  id="completed-color" 
+                  type="color"
+                  value={localSettings.statusColors?.completed || '#6b7280'} 
+                  onChange={(e) => setLocalSettings({ 
+                    ...localSettings, 
+                    statusColors: { ...localSettings.statusColors, completed: e.target.value }
+                  })}
+                  className="h-10"
+                />
+              </div>
+            </div>
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} className="text-base">Cancel</Button>
-          <Button onClick={handleSave} className="text-base">Save Settings</Button>
+        <DialogFooter className="mt-6">
+          <Button type="button" variant="outline" onClick={handleReset}>Reset</Button>
+          <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+          <Button type="button" onClick={handleSave}>Save Changes</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+
 // Week View Component
 function WeekView({ events, onDeleteEvent, onEditEvent, weekStart }: { 
   events: ScheduleEvent[]; 
-  onDeleteEvent: (id: string) => void;
-  onEditEvent: (event: ScheduleEvent) => void;
+  onDeleteEvent?: (id: string) => void;
+  onEditEvent?: (event: ScheduleEvent) => void;
   weekStart: Date;
 }) {
   const { settings } = useScheduleStore();
-  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const transitionSpeed = getTransitionSpeed(settings.transitionSpeed, settings.customTransitionSeconds);
   
-  const getEventsForDay = (date: Date) => {
-    return events.filter((e) => format(parseISO(e.dateStarted), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'))
-      .sort((a, b) => a.timeStart.localeCompare(b.timeStart));
-  };
+  const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
   return (
-    <div className="bg-card border border-border rounded-lg flex-1 min-h-0 flex flex-col overflow-hidden">
-      <div className="px-3 py-2 border-b border-border bg-muted/30">
-        <h2 className="text-base lg:text-lg font-bold text-foreground tracking-wide">
-          WEEK VIEW: {format(weekStart, 'MMM d')} - {format(addDays(weekStart, 6), 'MMM d, yyyy')}
+    <div className="flex-1 flex flex-col min-h-0">
+      <div className="text-center mb-2">
+        <h2 className="text-lg font-bold text-foreground">
+          {format(weekStart, 'MMMM d')} - {format(addDays(weekStart, 6), 'MMMM d, yyyy')}
         </h2>
       </div>
-      <div className="flex-1 grid grid-cols-7 divide-x divide-border overflow-hidden">
-        {days.map((day, index) => {
-          const date = addDays(weekStart, index);
-          const dayEvents = getEventsForDay(date);
-          const isToday = format(new Date(), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd');
+      
+      <div className="flex-1 grid grid-cols-7 gap-1 min-h-0">
+        {days.map((day) => {
+          const dayEvents = events.filter(e => format(parseISO(e.dateStarted), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd'));
+          const isWeekend = day.getDay() === 0 || day.getDay() === 6;
           
           return (
-            <div key={day} className="flex flex-col overflow-hidden min-h-0">
-              <div className={`px-2 py-2 text-center border-b border-border ${isToday ? 'bg-primary/10' : 'bg-muted/20'}`}>
-                <div className="text-sm font-medium text-muted-foreground">{day}</div>
-                <div className={`text-lg font-bold ${isToday ? 'text-primary' : 'text-foreground'}`}>
-                  {format(date, 'd')}
-                </div>
+            <div key={day.toISOString()} className={`flex flex-col min-h-0 rounded border ${isWeekend ? 'bg-muted/30' : 'bg-card'}`}>
+              <div className={`p-2 text-center border-b ${isToday(day) ? 'bg-primary text-primary-foreground' : ''}`}>
+                <div className="text-xs font-medium">{format(day, 'EEE')}</div>
+                <div className="text-lg font-bold">{format(day, 'd')}</div>
               </div>
-              <div className="flex-1 min-h-0 overflow-hidden p-1.5 space-y-1">
-                {dayEvents.length === 0 ? (
-                  <div className="text-center py-4 text-muted-foreground text-sm">—</div>
-                ) : (
-                  dayEvents.map((event) => (
-                    <WeekEventRow key={event.id} event={event} onDelete={() => onDeleteEvent(event.id)} onEdit={() => onEditEvent(event)} />
-                  ))
-                )}
+              
+              <div className="flex-1 overflow-y-auto p-1 space-y-1 min-h-0">
+                {dayEvents.map((event) => (
+                  <WeekEventRow
+                    key={event.id}
+                    event={event}
+                    onDelete={onDeleteEvent ? () => onDeleteEvent(event.id) : undefined}
+                    onEdit={onEditEvent ? () => onEditEvent(event) : undefined}
+                  />
+                ))}
               </div>
             </div>
           );
@@ -2687,146 +2025,103 @@ function WeekView({ events, onDeleteEvent, onEditEvent, weekStart }: {
   );
 }
 
-// Week Event Row (compact)
+// Week Event Row
 function WeekEventRow({ event, onDelete, onEdit }: { event: ScheduleEvent; onDelete?: () => void; onEdit?: () => void }) {
   const { settings } = useScheduleStore();
   const status = getEventStatus(event);
   const statusColor = settings.statusColors[status];
-  const isAllDay = event.timeStart === '00:00' && event.timeEnd === '23:59';
 
   return (
-    <motion.div 
-      layout
-      initial={{ opacity: 0, y: 5 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -5 }}
-      className="flex items-start gap-1 py-1 px-1.5 hover:bg-muted/50 rounded group transition-colors"
-    >
-      <StatusDot color={statusColor} size="sm" />
-      <div className="flex-1 min-w-0">
-        <div className="font-medium text-xs text-foreground truncate">{event.title}</div>
-        <div className="text-xs text-muted-foreground">
-          {isAllDay ? 'All Day' : formatTime12Hour(event.timeStart)}
-        </div>
+    <div className="group relative p-1 rounded text-xs bg-muted/50 hover:bg-muted">
+      <div className="flex items-center gap-1">
+        <StatusDot color={statusColor} size="sm" />
+        <span className="font-medium truncate flex-1">{event.title}</span>
       </div>
-      <div className="flex items-center gap-0.5 flex-shrink-0">
+      <div className="text-muted-foreground">
+        {formatTime12Hour(event.timeStart)}
+      </div>
+      <div className="absolute right-1 top-1 hidden group-hover:flex gap-0.5">
         {onEdit && (
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={onEdit}
-          >
-            <Pencil className="h-2.5 w-2.5 text-muted-foreground" />
+          <Button variant="ghost" size="icon" className="h-5 w-5" onClick={onEdit}>
+            <Pencil className="h-2.5 w-2.5" />
           </Button>
         )}
         {onDelete && (
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={onDelete}
-          >
+          <Button variant="ghost" size="icon" className="h-5 w-5" onClick={onDelete}>
             <Trash2 className="h-2.5 w-2.5 text-destructive" />
           </Button>
         )}
       </div>
-    </motion.div>
+    </div>
   );
 }
 
 // Month View Component
 function MonthView({ events, onDeleteEvent, onEditEvent, monthStart }: { 
   events: ScheduleEvent[]; 
-  onDeleteEvent: (id: string) => void;
-  onEditEvent: (event: ScheduleEvent) => void;
+  onDeleteEvent?: (id: string) => void;
+  onEditEvent?: (event: ScheduleEvent) => void;
   monthStart: Date;
 }) {
-  const { settings } = useScheduleStore();
-  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const monthEnd = endOfMonth(monthStart);
+  const startDate = startOfWeek(monthStart, { weekStartsOn: 1 });
+  const endDate = endOfWeek(monthEnd, { weekStartsOn: 1 });
   
-  // Generate all days for the calendar grid
-  const calendarDays = useMemo(() => {
-    const monthEnd = endOfMonth(monthStart);
-    const firstDayOfCalendar = startOfWeek(monthStart, { weekStartsOn: 1 });
-    const lastDayOfCalendar = endOfWeek(monthEnd, { weekStartsOn: 1 });
-    
-    const allDays: Date[] = [];
-    let currentDay = firstDayOfCalendar;
-    
-    // Generate all days (max 42 days = 6 weeks)
-    while (currentDay <= lastDayOfCalendar && allDays.length < 42) {
-      allDays.push(new Date(currentDay));
-      currentDay = addDays(currentDay, 1);
-    }
-    
-    // Ensure we have exactly 42 days for 6 weeks
-    while (allDays.length < 42) {
-      allDays.push(addDays(allDays[allDays.length - 1], 1));
-    }
-    
-    // Split into weeks
-    const result: Date[][] = [];
-    for (let i = 0; i < allDays.length; i += 7) {
-      result.push(allDays.slice(i, i + 7));
-    }
-    
-    return result;
-  }, [monthStart]);
-
-  const getEventsForDay = useCallback((date: Date) => {
-    return events.filter((e) => format(parseISO(e.dateStarted), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd'))
-      .sort((a, b) => a.timeStart.localeCompare(b.timeStart));
-  }, [events]);
-
-  const selectedDateEvents = selectedDate ? getEventsForDay(selectedDate) : [];
-  const transitionSpeed = getTransitionSpeed(settings.transitionSpeed, settings.customTransitionSeconds);
+  const days: Date[] = [];
+  let day = startDate;
+  while (day <= endDate) {
+    days.push(day);
+    day = addDays(day, 1);
+  }
+  
+  const weeks: Date[][] = [];
+  for (let i = 0; i < days.length; i += 7) {
+    weeks.push(days.slice(i, i + 7));
+  }
 
   return (
-    <>
-      <div className="bg-card border border-border rounded-lg flex-1 min-h-0 flex flex-col overflow-hidden">
-        <div className="px-2 py-1 border-b border-border bg-muted/30">
-          <h2 className="text-sm lg:text-base font-bold text-foreground tracking-wide">
-            MONTH VIEW: {format(monthStart, 'MMMM yyyy')}
-          </h2>
-        </div>
-        
+    <div className="flex-1 flex flex-col min-h-0">
+      <div className="text-center mb-2">
+        <h2 className="text-lg font-bold text-foreground">
+          {format(monthStart, 'MMMM yyyy')}
+        </h2>
+      </div>
+      
+      <div className="flex-1 flex flex-col min-h-0">
         {/* Day headers */}
-        <div className="grid grid-cols-7 divide-x divide-border border-b border-border">
-          {days.map((day) => (
-            <div key={day} className="px-1 py-1 text-center bg-muted/20">
-              <span className="text-xs font-medium text-muted-foreground">{day}</span>
+        <div className="grid grid-cols-7 gap-1 mb-1">
+          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => (
+            <div key={d} className="text-center text-xs font-medium text-muted-foreground py-1">
+              {d}
             </div>
           ))}
         </div>
         
-        {/* Calendar grid */}
-        <div className="flex-1 grid grid-rows-6 divide-y divide-border overflow-hidden">
-          {calendarDays.map((week, weekIndex) => (
-            <div key={weekIndex} className="grid grid-cols-7 divide-x divide-border">
-              {week.map((date, dayIndex) => {
-                const dayEvents = getEventsForDay(date);
-                const isCurrentMonth = format(date, 'M') === format(monthStart, 'M');
-                const isToday = format(new Date(), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd');
+        {/* Weeks */}
+        <div className="flex-1 grid grid-rows-6 gap-1 min-h-0">
+          {weeks.map((week, weekIdx) => (
+            <div key={weekIdx} className="grid grid-cols-7 gap-1">
+              {week.map((day) => {
+                const dayEvents = events.filter(e => format(parseISO(e.dateStarted), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd'));
+                const isCurrentMonth = format(day, 'M') === format(monthStart, 'M');
+                const isWeekend = day.getDay() === 0 || day.getDay() === 6;
                 
                 return (
                   <div 
-                    key={dayIndex} 
-                    className={`flex flex-col overflow-hidden cursor-pointer hover:bg-muted/20 transition-colors ${!isCurrentMonth ? 'bg-muted/30' : ''} ${isToday ? 'bg-primary/5' : ''}`}
-                    onClick={() => setSelectedDate(date)}
+                    key={day.toISOString()} 
+                    className={`flex flex-col rounded border p-1 min-h-0 ${
+                      !isCurrentMonth ? 'bg-muted/20 opacity-50' : isWeekend ? 'bg-muted/30' : 'bg-card'
+                    } ${isToday(day) ? 'ring-2 ring-primary' : ''}`}
                   >
-                    <div className={`px-1 py-0.5 text-right ${isToday ? 'bg-primary text-primary-foreground' : ''}`}>
-                      <span className={`text-xs font-medium ${isToday ? '' : isCurrentMonth ? 'text-foreground' : 'text-muted-foreground'}`}>
-                        {format(date, 'd')}
-                      </span>
+                    <div className={`text-xs font-medium mb-1 ${isToday(day) ? 'text-primary font-bold' : ''}`}>
+                      {format(day, 'd')}
                     </div>
-                    <div className="flex-1 overflow-hidden p-0.5 space-y-0.5">
-                      {dayEvents.slice(0, 4).map((event) => (
-                        <MonthEventRow key={event.id} event={event} onDelete={() => onDeleteEvent(event.id)} onEdit={() => onEditEvent(event)} />
+                    <div className="flex-1 overflow-hidden">
+                      {dayEvents.slice(0, 3).map((event) => (
+                        <MonthEventRow key={event.id} event={event} />
                       ))}
-                      {dayEvents.length > 4 && (
-                        <div className="text-xs text-muted-foreground text-center">+{dayEvents.length - 4} more</div>
+                      {dayEvents.length > 3 && (
+                        <div className="text-xs text-muted-foreground">+{dayEvents.length - 3} more</div>
                       )}
                     </div>
                   </div>
@@ -2836,420 +2131,20 @@ function MonthView({ events, onDeleteEvent, onEditEvent, monthStart }: {
           ))}
         </div>
       </div>
-
-      {/* Day Events Dialog */}
-      <Dialog open={!!selectedDate} onOpenChange={() => setSelectedDate(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-xl">
-              {selectedDate && format(selectedDate, 'EEEE, MMMM d, yyyy')}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-2 max-h-96 overflow-y-auto">
-            {selectedDateEvents.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">No events on this day</p>
-            ) : (
-              selectedDateEvents.map((event) => (
-                <EventRow 
-                  key={event.id}
-                  event={event}
-                  onDelete={() => onDeleteEvent(event.id)}
-                  onEdit={() => { setSelectedDate(null); onEditEvent(event); }}
-                  transitionStyle="static"
-                  transitionSpeed={transitionSpeed}
-                />
-              ))
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
+    </div>
   );
 }
 
-// Month Event Row (very compact)
-function MonthEventRow({ event, onDelete, onEdit }: { event: ScheduleEvent; onDelete?: () => void; onEdit?: () => void }) {
+// Month Event Row
+function MonthEventRow({ event }: { event: ScheduleEvent }) {
   const { settings } = useScheduleStore();
   const status = getEventStatus(event);
   const statusColor = settings.statusColors[status];
 
   return (
-    <motion.div 
-      layout
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="flex items-center gap-0.5 py-0.5 px-1 hover:bg-muted/50 rounded group transition-colors cursor-pointer"
-      title={`${event.title} - ${formatTime12Hour(event.timeStart)}`}
-    >
+    <div className="text-xs truncate flex items-center gap-1">
       <StatusDot color={statusColor} size="sm" />
-      <span className="text-xs text-foreground truncate flex-1">{event.title}</span>
-      {onEdit && (
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity"
-          onClick={(e) => { e.stopPropagation(); onEdit(); }}
-        >
-          <Pencil className="h-2 w-2 text-muted-foreground" />
-        </Button>
-      )}
-    </motion.div>
-  );
-}
-
-// Main Page Component
-export default function EUSTDDSchedule() {
-  const { events, settings, deleteEvent, deletePersonnelStatus, deleteProject, _hasHydrated, loadFromServer, startAutoSync, stopAutoSync } = useScheduleStore();
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [modalType, setModalType] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'day' | 'week' | 'month'>('day');
-  
-  // Edit state
-  const [editingEvent, setEditingEvent] = useState<ScheduleEvent | null>(null);
-  const [editingPersonnel, setEditingPersonnel] = useState<PersonnelStatus | null>(null);
-  const [editingProject, setEditingProject] = useState<Project | null>(null);
-  
-  // Session-based PIN protection
-  const [isSessionUnlocked, setIsSessionUnlocked] = useState(false);
-  const [sessionPinDialogOpen, setSessionPinDialogOpen] = useState(false);
-
-  // Notification state - must be before early return
-  const [activeNotifications, setActiveNotifications] = useState<EventNotification[]>([]);
-  const [dismissedNotifications, setDismissedNotifications] = useState<Set<string>>(new Set());
-  const previousNotificationIdsRef = useRef<Set<string>>(new Set());
-
-  const today = new Date();
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-
-  // Day view: Today and Tomorrow
-  const todayEvents = events.filter((e) => isToday(parseISO(e.dateStarted)));
-  const tomorrowEvents = events.filter((e) => isTomorrow(parseISO(e.dateStarted)));
-
-  // Stable reference to today events for notification check
-  const todayEventsKey = todayEvents.map(e => e.id).join(',');
-  const dismissedKey = [...dismissedNotifications].join(',');
-
-  // Load data from server and start auto-sync on mount
-  useEffect(() => {
-    loadFromServer();
-    startAutoSync();
-    
-    return () => {
-      stopAutoSync();
-    };
-  }, [loadFromServer, startAutoSync, stopAutoSync]);
-
-// Check session authentication on mount
-useEffect(() => {
-  if (!_hasHydrated) return;
-  if (typeof window === 'undefined') return;
-  
-  // Check session authentication on mount
-useEffect(() => {
-  if (!_hasHydrated) return;
-  if (typeof window === 'undefined') return;
-  
-  // Check if password protection is enabled
-  const requiresPassword = settings.passwordEnabled && settings.password;
-  
-  if (requiresPassword) {
-    // Check if session is already unlocked (using sessionStorage)
-    const sessionAuth = sessionStorage.getItem('eustdd-session-auth');
-    // Use microtask to avoid synchronous setState warning
-    queueMicrotask(() => {
-      if (sessionAuth === 'unlocked') {
-        setIsSessionUnlocked(true);
-      } else {
-        // Show password dialog
-        setSessionPasswordDialogOpen(true);
-      }
-    });
-  } else {
-    // No password required, unlock immediately
-    queueMicrotask(() => setIsSessionUnlocked(true));
-  }
-}, [_hasHydrated, settings.passwordEnabled, settings.password]);
-
-  // Apply theme
-  useEffect(() => {
-    if (settings.theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [settings.theme]);
-
-  // Check for upcoming events every 10 seconds
-  useEffect(() => {
-    if (!_hasHydrated) return;
-    
-    const checkNotifications = () => {
-      const upcoming = getUpcomingEvents(todayEvents, 5);
-      // Filter out dismissed notifications
-      const newNotifications = upcoming.filter(n => !dismissedNotifications.has(n.event.id));
-      
-      // Check if there are new notifications (not previously shown)
-      const newIds = new Set(newNotifications.map(n => n.event.id));
-      const hasNewNotifications = [...newIds].some(id => !previousNotificationIdsRef.current.has(id));
-      
-      if (hasNewNotifications && newNotifications.length > 0) {
-        // Play notification sound using Web Audio API
-        try {
-          if (typeof window !== 'undefined') {
-            const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-            if (AudioContextClass) {
-              const audioContext = new AudioContextClass();
-              
-              const playTone = (frequency: number, startTime: number, duration: number, volume: number = 0.3) => {
-                const oscillator = audioContext.createOscillator();
-                const gainNode = audioContext.createGain();
-                
-                oscillator.connect(gainNode);
-                gainNode.connect(audioContext.destination);
-                
-                oscillator.frequency.value = frequency;
-                oscillator.type = 'sine';
-                
-                gainNode.gain.setValueAtTime(0, startTime);
-                gainNode.gain.linearRampToValueAtTime(volume, startTime + 0.01);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
-                
-                oscillator.start(startTime);
-                oscillator.stop(startTime + duration);
-              };
-              
-              const now = audioContext.currentTime;
-              playTone(523.25, now, 0.15, 0.25);
-              playTone(659.25, now + 0.15, 0.15, 0.25);
-              playTone(783.99, now + 0.3, 0.3, 0.25);
-            }
-          }
-        } catch {
-          console.log('Audio not supported');
-        }
-      }
-      
-      previousNotificationIdsRef.current = newIds;
-      setActiveNotifications(newNotifications);
-    };
-
-    // Check immediately
-    checkNotifications();
-
-    // Check every 10 seconds
-    const interval = setInterval(checkNotifications, 10000);
-
-    return () => clearInterval(interval);
-  }, [todayEventsKey, dismissedKey, _hasHydrated]);
-
-  // Dismiss notification
-  const dismissNotification = (eventId: string) => {
-    setDismissedNotifications(prev => new Set([...prev, eventId]));
-    setActiveNotifications(prev => prev.filter(n => n.event.id !== eventId));
-  };
-
-  // Handle session PIN success
-  const handleSessionPinSuccess = () => {
-    sessionStorage.setItem('eustdd-session-auth', 'unlocked');
-    setIsSessionUnlocked(true);
-    setSessionPinDialogOpen(false);
-  };
-
-  // Show loading until hydrated
-  if (!_hasHydrated) {
-    return (
-      <div className="h-screen bg-background flex items-center justify-center">
-        <div className="text-muted-foreground">Loading...</div>
-      </div>
-    );
-  }
-
-  // Show PIN lock screen if session is not unlocked
-  if (!isSessionUnlocked) {
-    return (
-      <div className="h-screen bg-background flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <Lock className="h-16 w-16 mx-auto text-muted-foreground" />
-          <h1 className="text-2xl font-bold text-foreground">EUSTDD SCHEDULE</h1>
-          <p className="text-muted-foreground">Enter PIN to access</p>
-        </div>
-        <PinDialog 
-          open={sessionPinDialogOpen}
-          onClose={() => setSessionPinDialogOpen(true)}
-          onSuccess={handleSessionPinSuccess}
-          title="Enter PIN to Unlock"
-        />
-      </div>
-    );
-  }
-
-  // Week view
-  const weekStart = startOfWeek(today, { weekStartsOn: 1 });
-
-  // Month view
-  const monthStart = startOfMonth(today);
-
-  const handleAddEntry = (type: string) => {
-    setModalType(type);
-  };
-
-  const closeModal = () => {
-    setModalType(null);
-  };
-
-  // Render based on view mode
-  const renderMainContent = () => {
-    if (viewMode === 'day') {
-      return (
-        <main className="flex-1 p-1 sm:p-2 grid grid-cols-1 lg:grid-cols-2 grid-rows-[auto_auto_auto_auto] lg:grid-rows-2 gap-1 sm:gap-2 max-w-[1920px] mx-auto w-full min-h-0 overflow-hidden">
-          <SchedulePanel 
-            title="TODAY'S SCHEDULE"
-            date={format(today, 'EEEE, MMMM d, yyyy')}
-            events={todayEvents}
-            onDeleteEvent={deleteEvent}
-            onEditEvent={setEditingEvent}
-          />
-          
-          <SchedulePanel 
-            title="TOMORROW'S SCHEDULE"
-            date={format(tomorrow, 'EEEE, MMMM d, yyyy')}
-            events={tomorrowEvents}
-            onDeleteEvent={deleteEvent}
-            onEditEvent={setEditingEvent}
-          />
-          
-          <PersonnelStatusPanel onDeletePersonnel={deletePersonnelStatus} onEditPersonnel={setEditingPersonnel} />
-          
-          <ProjectRequestPanel onDeleteProject={deleteProject} onEditProject={setEditingProject} />
-        </main>
-      );
-    } else if (viewMode === 'week') {
-      return (
-        <main className="flex-1 p-1 sm:p-2 flex flex-col min-h-0 max-w-[1920px] mx-auto w-full overflow-hidden">
-          <WeekView 
-            events={events}
-            onDeleteEvent={deleteEvent}
-            onEditEvent={setEditingEvent}
-            weekStart={weekStart}
-          />
-        </main>
-      );
-    } else {
-      return (
-        <main className="flex-1 p-1 sm:p-2 flex flex-col min-h-0 max-w-[1920px] mx-auto w-full overflow-hidden">
-          <MonthView 
-            events={events}
-            onDeleteEvent={deleteEvent}
-            onEditEvent={setEditingEvent}
-            monthStart={monthStart}
-          />
-        </main>
-      );
-    }
-  };
-
-  return (
-    <div className="h-screen bg-background flex flex-col overflow-hidden">
-      <Header 
-        onOpenSettings={() => setSettingsOpen(true)}
-        onAddEntry={handleAddEntry}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-      />
-      
-      {renderMainContent()}
-
-      {/* Event Notifications */}
-      <AnimatePresence>
-        {activeNotifications.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: -100, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -100, scale: 0.9 }}
-            className="fixed top-16 sm:top-20 left-1/2 -translate-x-1/2 z-50 px-2 w-full max-w-[400px]"
-          >
-            <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg sm:rounded-xl shadow-2xl p-3 sm:p-4">
-              <div className="flex items-start gap-2 sm:gap-3">
-                <motion.div
-                  animate={{ scale: [1, 1.2, 1] }}
-                  transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 0.5 }}
-                >
-                  <BellRing className="h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0" />
-                </motion.div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="font-bold text-sm sm:text-lg">Event Starting Soon!</p>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 text-white/80 hover:text-white hover:bg-white/20"
-                      onClick={() => dismissNotification(activeNotifications[0].event.id)}
-                    >
-                      <X className="h-3 w-3 sm:h-4 sm:w-4" />
-                    </Button>
-                  </div>
-                  <p className="font-semibold text-white/90 truncate text-sm sm:text-base">{activeNotifications[0].event.title}</p>
-                  <div className="flex items-center gap-1 sm:gap-2 mt-1 text-xs sm:text-sm">
-                    <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-white/70" />
-                    <span className="text-white/80">
-                      Starts in <span className="font-bold text-white">{activeNotifications[0].minutesUntil} min</span>
-                    </span>
-                    <span className="text-white/70">
-                      • {formatTime12Hour(activeNotifications[0].event.timeStart)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Modals */}
-      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
-      
-      <AddEventModal open={modalType === 'event'} onClose={closeModal} />
-      
-      <AddPersonnelModal 
-        open={modalType === 'cto'} 
-        onClose={closeModal} 
-        type="CTO"
-      />
-      
-      <AddPersonnelModal 
-        open={modalType === 'wfh'} 
-        onClose={closeModal} 
-        type="WFH"
-      />
-      
-      <AddPersonnelModal 
-        open={modalType === 'travel'} 
-        onClose={closeModal} 
-        type="TRAVEL"
-      />
-      
-      <AddProjectModal open={modalType === 'project'} onClose={closeModal} />
-      
-      {/* Edit Modals */}
-      <EditEventModal 
-        open={!!editingEvent} 
-        onClose={() => setEditingEvent(null)} 
-        event={editingEvent}
-      />
-      
-      <EditPersonnelModal 
-        open={!!editingPersonnel} 
-        onClose={() => setEditingPersonnel(null)} 
-        personnel={editingPersonnel}
-      />
-      
-      <EditProjectModal 
-        open={!!editingProject} 
-        onClose={() => setEditingProject(null)} 
-        project={editingProject}
-      />
+      <span className="truncate">{event.title}</span>
     </div>
   );
 }
