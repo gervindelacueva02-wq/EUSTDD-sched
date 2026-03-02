@@ -14,24 +14,24 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "EUSTDD Schedule",
-  description: "Official EUSTDD Scheduling System powered by DOST-PCIEERD.",
-  keywords: ["EUSTDD", "Scheduling System", "DOST-PCIEERD", "University System"],
-  authors: [{ name: "EUSTDD Interns" }],
+  title: "Z.ai Code Scaffold - AI-Powered Development",
+  description: "Modern Next.js scaffold optimized for AI-powered development with Z.ai. Built with TypeScript, Tailwind CSS, and shadcn/ui.",
+  keywords: ["Z.ai", "Next.js", "TypeScript", "Tailwind CSS", "shadcn/ui", "AI development", "React"],
+  authors: [{ name: "Z.ai Team" }],
   icons: {
-    icon: "/favicon.png",
+    icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
   },
   openGraph: {
-    title: "EUSTDD Schedule",
-    description: "Official EUSTDD Scheduling System powered by DOST-PCIEERD.",
-    url: "https://eustdd-schedule.onrender.com",
-    siteName: "EUSTDD Schedule",
+    title: "Z.ai Code Scaffold",
+    description: "AI-powered development with modern React stack",
+    url: "https://chat.z.ai",
+    siteName: "Z.ai",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "EUSTDD Schedule",
-    description: "Official EUSTDD Scheduling System powered by DOST-PCIEERD.",
+    title: "Z.ai Code Scaffold",
+    description: "AI-powered development with modern React stack",
   },
 };
 

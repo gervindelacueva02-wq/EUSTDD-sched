@@ -6,7 +6,8 @@ services:
     plan: free
     region: oregon
     branch: main
-    buildCommand: npm install && npx prisma generate && npx prisma db push && npm run build
+    rootDir: v1
+    buildCommand: npm ci --legacy-peer-deps && npx prisma generate && npx prisma db push && npm run build
     startCommand: npm run start
     envVars:
       - key: NODE_ENV
@@ -19,6 +20,8 @@ services:
         fromDatabase:
           name: eustdd-db
           property: connectionString
+      - key: NPM_CONFIG_PRODUCTION
+        value: false
 
 databases:
   - name: eustdd-db
