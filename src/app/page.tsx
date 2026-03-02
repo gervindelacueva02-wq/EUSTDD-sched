@@ -2167,6 +2167,7 @@ function MonthEventRow({ event, onDelete, onEdit }: { event: ScheduleEvent; onDe
   );
 }
 
+
 // Main Page Component
 export default function EUSTDDSchedule() {
   const { events, settings, deleteEvent, deletePersonnelStatus, deleteProject, _hasHydrated, loadFromServer, startAutoSync, stopAutoSync } = useScheduleStore();
@@ -2174,16 +2175,13 @@ export default function EUSTDDSchedule() {
   const [modalType, setModalType] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'day' | 'week' | 'month'>('day');
   
-  // Edit state
   const [editingEvent, setEditingEvent] = useState<ScheduleEvent | null>(null);
   const [editingPersonnel, setEditingPersonnel] = useState<PersonnelStatus | null>(null);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   
-  // Session-based PIN protection
   const [isSessionUnlocked, setIsSessionUnlocked] = useState(false);
   const [sessionPinDialogOpen, setSessionPinDialogOpen] = useState(false);
 
-  // Notification state
   const [activeNotifications, setActiveNotifications] = useState<EventNotification[]>([]);
   const [dismissedNotifications, setDismissedNotifications] = useState<Set<string>>(new Set());
   const previousNotificationIdsRef = useRef<Set<string>>(new Set());
