@@ -1,0 +1,22 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:../db/custom.db"
+}
+
+// Main schedule data storage - single record for all data
+model ScheduleData {
+  id        String   @id @default("main")
+  events    String   @default("[]")      // JSON string of events
+  personnel String   @default("[]")      // JSON string of personnel statuses
+  projects  String   @default("[]")      // JSON string of projects
+  settings  String   @default("{}")      // JSON string of settings
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
