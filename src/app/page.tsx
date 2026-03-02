@@ -16,8 +16,8 @@ import {
   Pencil
 } from 'lucide-react';
 import { useScheduleStore } from '@/store/schedule-store';
-import type { ScheduleEvent, PersonnelStatus, Project, Settings as SettingsType, EventStatus, TransitionStyle, TransitionSpeed } from '@/types/schedule';import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import type { ScheduleEvent, PersonnelStatus, Project, Settings as SettingsType, EventStatus, TransitionStyle, TransitionSpeed } from '@/types/schedule';
+import { Button } from '@/components/ui/button';import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { 
   Dialog, 
@@ -2135,16 +2135,254 @@ function MonthView({ events, onDeleteEvent, onEditEvent, monthStart }: {
   );
 }
 
-// Month Event Row
-function MonthEventRow({ event }: { event: ScheduleEvent }) {
+
+// Month Event Row (very compact)
+function MonthEventRow({ event, onDelete, onEdit }: { event: ScheduleEvent; onDelete?: () => void; onEdit?: () => void }) {
   const { settings } = useScheduleStore();
   const status = getEventStatus(event);
   const statusColor = settings.statusColors[status];
 
   return (
-    <div className="text-xs truncate flex items-center gap-1">
+    <motion.div 
+      layout
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="flex items-center gap-0.5 py-0.5 px-1 hover:bg-muted/50 rounded group transition-colors cursor-pointer"
+      title={`${event.title} - ${formatTime12Hour(event.timeStart)}`}
+    >
       <StatusDot color={statusColor} size="sm" />
-      <span className="truncate">{event.title}</span>
+      <span className="text-xs text-foreground truncate flex-1">{event.title}</span>
+      {onEdit && (
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity"
+          onClick={(e) => { e.stopPropagation(); onEdit(); }}
+        >
+          <Pencil className="h-2 w-2 text-muted-foreground" />
+        </Button>
+      )}
+    </motion.div>
+  );
+}
+
+// Main Page Component
+export default function EUSTDDSchedule() {
+  const { events, settings, deleteEvent, deletePersonnelStatus, deleteProject, _hasHydrated, loadFromServer, startAutoSync, stopAutoSync } = useScheduleStore();
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [modalType, setModalType] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'day' | 'week' | 'month'>('day');
+  
+  // Edit state
+  const [editingEvent, setEditingEvent] = useState<ScheduleEvent | null>(null);
+  const [editingPersonnel, setEditingPersonnel] = useState<PersonnelStatus | null>(null);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
+  
+  // Session-based PIN protection
+  const [isSessionUnlocked, setIsSessionUnlocked] = useState(false);
+  const [sessionPinDialogOpen, setSessionPinDialogOpen] = useState(false);
+
+  // Notification state
+  const [activeNotifications, setActiveNotifications] = useState<EventNotification[]>([]);
+  const [dismissedNotifications, setDismissedNotifications] = useState<Set<string>>(new Set());
+  const previousNotificationIdsRef = useRef<Set<string>>(new Set());
+
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const todayEvents = events.filter((e) => isToday(parseISO(e.dateStarted)));
+  const tomorrowEvents = events.filter((e) => isTomorrow(parseISO(e.dateStarted)));
+
+  const todayEventsKey = todayEvents.map(e => e.id).join(',');
+  const dismissedKey = [...dismissedNotifications].join(',');
+
+  useEffect(() => {
+    loadFromServer();
+    startAutoSync();
+    return () => stopAutoSync();
+  }, [loadFromServer, startAutoSync, stopAutoSync]);
+
+  useEffect(() => {
+    if (!_hasHydrated) return;
+    if (typeof window === 'undefined') return;
+    const requiresPassword = settings.passwordEnabled && settings.password;
+    if (requiresPassword) {
+      const sessionAuth = sessionStorage.getItem('eustdd-session-auth');
+      queueMicrotask(() => {
+        if (sessionAuth === 'unlocked') {
+          setIsSessionUnlocked(true);
+        } else {
+          setSessionPinDialogOpen(true);
+        }
+      });
+    } else {
+      queueMicrotask(() => setIsSessionUnlocked(true));
+    }
+  }, [_hasHydrated, settings.passwordEnabled, settings.password]);
+
+  useEffect(() => {
+    if (settings.theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [settings.theme]);
+
+  useEffect(() => {
+    if (!_hasHydrated) return;
+    const checkNotifications = () => {
+      const upcoming = getUpcomingEvents(todayEvents, 5);
+      const newNotifications = upcoming.filter(n => !dismissedNotifications.has(n.event.id));
+      const newIds = new Set(newNotifications.map(n => n.event.id));
+      const hasNewNotifications = [...newIds].some(id => !previousNotificationIdsRef.current.has(id));
+      
+      if (hasNewNotifications && newNotifications.length > 0) {
+        try {
+          if (typeof window !== 'undefined') {
+            const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+            if (AudioContextClass) {
+              const audioContext = new AudioContextClass();
+              const playTone = (frequency: number, startTime: number, duration: number, volume: number = 0.3) => {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                oscillator.frequency.value = frequency;
+                oscillator.type = 'sine';
+                gainNode.gain.setValueAtTime(0, startTime);
+                gainNode.gain.linearRampToValueAtTime(volume, startTime + 0.01);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+                oscillator.start(startTime);
+                oscillator.stop(startTime + duration);
+              };
+              const now = audioContext.currentTime;
+              playTone(523.25, now, 0.15, 0.25);
+              playTone(659.25, now + 0.15, 0.15, 0.25);
+              playTone(783.99, now + 0.3, 0.3, 0.25);
+            }
+          }
+        } catch {
+          console.log('Audio not supported');
+        }
+      }
+      previousNotificationIdsRef.current = newIds;
+      setActiveNotifications(newNotifications);
+    };
+    checkNotifications();
+    const interval = setInterval(checkNotifications, 10000);
+    return () => clearInterval(interval);
+  }, [todayEventsKey, dismissedKey, _hasHydrated]);
+
+  const dismissNotification = (eventId: string) => {
+    setDismissedNotifications(prev => new Set([...prev, eventId]));
+    setActiveNotifications(prev => prev.filter(n => n.event.id !== eventId));
+  };
+
+  const handleSessionPinSuccess = () => {
+    sessionStorage.setItem('eustdd-session-auth', 'unlocked');
+    setIsSessionUnlocked(true);
+    setSessionPinDialogOpen(false);
+  };
+
+  if (!_hasHydrated) {
+    return (
+      <div className="h-screen bg-background flex items-center justify-center">
+        <div className="text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!isSessionUnlocked) {
+    return (
+      <div className="h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <Lock className="h-16 w-16 mx-auto text-muted-foreground" />
+          <h1 className="text-2xl font-bold text-foreground">EUSTDD SCHEDULE</h1>
+          <p className="text-muted-foreground">Enter PIN to access</p>
+        </div>
+        <PinDialog 
+          open={sessionPinDialogOpen}
+          onClose={() => setSessionPinDialogOpen(true)}
+          onSuccess={handleSessionPinSuccess}
+          title="Enter PIN to Unlock"
+        />
+      </div>
+    );
+  }
+
+  const weekStart = startOfWeek(today, { weekStartsOn: 1 });
+  const monthStart = startOfMonth(today);
+
+  const handleAddEntry = (type: string) => setModalType(type);
+  const closeModal = () => setModalType(null);
+
+  const renderMainContent = () => {
+    if (viewMode === 'day') {
+      return (
+        <main className="flex-1 p-1 sm:p-2 grid grid-cols-1 lg:grid-cols-2 grid-rows-[auto_auto_auto_auto] lg:grid-rows-2 gap-1 sm:gap-2 max-w-[1920px] mx-auto w-full min-h-0 overflow-hidden">
+          <SchedulePanel title="TODAY'S SCHEDULE" date={format(today, 'EEEE, MMMM d, yyyy')} events={todayEvents} onDeleteEvent={deleteEvent} onEditEvent={setEditingEvent} />
+          <SchedulePanel title="TOMORROW'S SCHEDULE" date={format(tomorrow, 'EEEE, MMMM d, yyyy')} events={tomorrowEvents} onDeleteEvent={deleteEvent} onEditEvent={setEditingEvent} />
+          <PersonnelStatusPanel onDeletePersonnel={deletePersonnelStatus} onEditPersonnel={setEditingPersonnel} />
+          <ProjectRequestPanel onDeleteProject={deleteProject} onEditProject={setEditingProject} />
+        </main>
+      );
+    } else if (viewMode === 'week') {
+      return (
+        <main className="flex-1 p-1 sm:p-2 flex flex-col min-h-0 max-w-[1920px] mx-auto w-full overflow-hidden">
+          <WeekView events={events} onDeleteEvent={deleteEvent} onEditEvent={setEditingEvent} weekStart={weekStart} />
+        </main>
+      );
+    } else {
+      return (
+        <main className="flex-1 p-1 sm:p-2 flex flex-col min-h-0 max-w-[1920px] mx-auto w-full overflow-hidden">
+          <MonthView events={events} onDeleteEvent={deleteEvent} onEditEvent={setEditingEvent} monthStart={monthStart} />
+        </main>
+      );
+    }
+  };
+
+  return (
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
+      <Header onOpenSettings={() => setSettingsOpen(true)} onAddEntry={handleAddEntry} viewMode={viewMode} onViewModeChange={setViewMode} />
+      {renderMainContent()}
+      <AnimatePresence>
+        {activeNotifications.length > 0 && (
+          <motion.div initial={{ opacity: 0, y: -100, scale: 0.9 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -100, scale: 0.9 }} className="fixed top-16 sm:top-20 left-1/2 -translate-x-1/2 z-50 px-2 w-full max-w-[400px]">
+            <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg sm:rounded-xl shadow-2xl p-3 sm:p-4">
+              <div className="flex items-start gap-2 sm:gap-3">
+                <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 0.5 }}>
+                  <BellRing className="h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0" />
+                </motion.div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-bold text-sm sm:text-lg">Event Starting Soon!</p>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 text-white/80 hover:text-white hover:bg-white/20" onClick={() => dismissNotification(activeNotifications[0].event.id)}>
+                      <X className="h-3 w-3 sm:h-4 sm:w-4" />
+                    </Button>
+                  </div>
+                  <p className="font-semibold text-white/90 truncate text-sm sm:text-base">{activeNotifications[0].event.title}</p>
+                  <div className="flex items-center gap-1 sm:gap-2 mt-1 text-xs sm:text-sm">
+                    <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-white/70" />
+                    <span className="text-white/80">Starts in <span className="font-bold text-white">{activeNotifications[0].minutesUntil} min</span></span>
+                    <span className="text-white/70">• {formatTime12Hour(activeNotifications[0].event.timeStart)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <AddEventModal open={modalType === 'event'} onClose={closeModal} />
+      <AddPersonnelModal open={modalType === 'cto'} onClose={closeModal} type="CTO" />
+      <AddPersonnelModal open={modalType === 'wfh'} onClose={closeModal} type="WFH" />
+      <AddPersonnelModal open={modalType === 'travel'} onClose={closeModal} type="TRAVEL" />
+      <AddProjectModal open={modalType === 'project'} onClose={closeModal} />
+      <EditEventModal open={!!editingEvent} onClose={() => setEditingEvent(null)} event={editingEvent} />
+      <EditPersonnelModal open={!!editingPersonnel} onClose={() => setEditingPersonnel(null)} personnel={editingPersonnel} />
+      <EditProjectModal open={!!editingProject} onClose={() => setEditingProject(null)} project={editingProject} />
     </div>
   );
 }
