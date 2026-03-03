@@ -22,26 +22,26 @@ export async function GET() {
     if (!data) {
       data = await db.scheduleData.create({
         data: {
-        id: 'main',
-        events: '[]',
-        personnel: '[]',
-        projects: '[]',
-        tickerMessages: '[]',
-        settings: JSON.stringify({
-          theme: 'light',
-          transitionStyle: 'static',
-          transitionSpeed: 'normal',
-          customTransitionSeconds: 3,
-          smoothScrollEnabled: true,
-          statusColors: {
-            upcoming: '#3b82f6',
-            ongoing: '#22c55e',
-            completed: '#9ca3af',
-          },
-          pinEnabled: false,
-          pin: '',
-        }),
-      },
+          id: 'main',
+          events: '[]',
+          personnel: '[]',
+          projects: '[]',
+          tickerMessages: '[]',
+          settings: JSON.stringify({
+            theme: 'light',
+            transitionStyle: 'static',
+            transitionSpeed: 'normal',
+            customTransitionSeconds: 3,
+            smoothScrollEnabled: true,
+            statusColors: {
+              upcoming: '#3b82f6',
+              ongoing: '#22c55e',
+              completed: '#9ca3af',
+            },
+            pinEnabled: false,
+            pin: '',
+          }),
+        },
       });
     }
 

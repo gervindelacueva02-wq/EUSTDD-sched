@@ -121,7 +121,17 @@
   }
 }
 
-/* Scrolling Ticker Animation */
+/* Hide scrollbar but keep functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
+}
+
+/* Ticker scroll animation */
 @keyframes scroll-ticker {
   0% {
     transform: translateX(0);
@@ -132,5 +142,5 @@
 }
 
 .animate-scroll-ticker {
-  animation: scroll-ticker 20s linear infinite;
+  animation: scroll-ticker 30s linear infinite;
 }

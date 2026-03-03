@@ -3500,7 +3500,7 @@ export default function EUSTDDSchedule() {
     setPrefilledDate(null);
   };
 
-// Render based on view mode
+  // Render based on view mode
   const renderMainContent = () => {
     if (viewMode === 'day') {
       return (
