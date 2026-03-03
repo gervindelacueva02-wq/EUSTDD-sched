@@ -14,22 +14,24 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "EUSTDD Schedule - Event & Personnel Management",
-  description: "EUSTDD Schedule application for managing events, personnel status, projects, and announcements. Track CTO/FL, WFH, and travel status.",
-  keywords: ["EUSTDD", "Schedule", "Events", "Personnel", "Management", "Calendar"],
-  authors: [{ name: "EUSTDD Team" }],
+  title: "Z.ai Code Scaffold - AI-Powered Development",
+  description: "Modern Next.js scaffold optimized for AI-powered development with Z.ai. Built with TypeScript, Tailwind CSS, and shadcn/ui.",
+  keywords: ["Z.ai", "Next.js", "TypeScript", "Tailwind CSS", "shadcn/ui", "AI development", "React"],
+  authors: [{ name: "Z.ai Team" }],
   icons: {
-    icon: "/favicon.ico",
+    icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
   },
   openGraph: {
-    title: "EUSTDD Schedule",
-    description: "Event & Personnel Management System",
+    title: "Z.ai Code Scaffold",
+    description: "AI-powered development with modern React stack",
+    url: "https://chat.z.ai",
+    siteName: "Z.ai",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "EUSTDD Schedule",
-    description: "Event & Personnel Management System",
+    title: "Z.ai Code Scaffold",
+    description: "AI-powered development with modern React stack",
   },
 };
 
