@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: eustdd-schedule
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: DATABASE_URL
+        value: "file:/tmp/eustdd.db"
