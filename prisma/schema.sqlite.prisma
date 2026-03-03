@@ -1,13 +1,13 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// SQLite schema for LOCAL DEVELOPMENT only
+// Copy this to schema.prisma for local development
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
+  provider  = "sqlite"
+  url       = "file:./db/custom.db"
 }
 
 // Main schedule data storage - single record for all data
