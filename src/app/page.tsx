@@ -561,11 +561,11 @@ function Header({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-40">
                   <DropdownMenuItem onClick={() => handleProtectedAction(() => onAddEntry('event'), 'add', 'event')}>Add Event</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleProtectedAction(() => onAddEntry('cto'), 'add', 'cto')}>Add CTO / FL</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleProtectedAction(() => onAddEntry('cto'), 'add', 'cto')}>Add CTO / LEAVE</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleProtectedAction(() => onAddEntry('wfh'), 'add', 'wfh')}>Add WFH</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleProtectedAction(() => onAddEntry('travel'), 'add', 'travel')}>Add In Travel</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleProtectedAction(() => onAddEntry('project'), 'add', 'project')}>Add Project</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleProtectedAction(() => onAddEntry('ticker'), 'add', 'ticker')}>Add Announcement</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleProtectedAction(() => onAddEntry('ticker'), 'add', 'ticker')}>Add Renewing Project</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
               
@@ -638,11 +638,11 @@ function Header({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-44">
                 <DropdownMenuItem className="text-sm py-2" onClick={() => handleProtectedAction(() => onAddEntry('event'), 'add', 'event')}>Add Event</DropdownMenuItem>
-                <DropdownMenuItem className="text-sm py-2" onClick={() => handleProtectedAction(() => onAddEntry('cto'), 'add', 'cto')}>Add CTO / FL</DropdownMenuItem>
+                <DropdownMenuItem className="text-sm py-2" onClick={() => handleProtectedAction(() => onAddEntry('cto'), 'add', 'cto')}>Add CTO / LEAVE</DropdownMenuItem>
                 <DropdownMenuItem className="text-sm py-2" onClick={() => handleProtectedAction(() => onAddEntry('wfh'), 'add', 'wfh')}>Add WFH</DropdownMenuItem>
                 <DropdownMenuItem className="text-sm py-2" onClick={() => handleProtectedAction(() => onAddEntry('travel'), 'add', 'travel')}>Add In Travel</DropdownMenuItem>
                 <DropdownMenuItem className="text-sm py-2" onClick={() => handleProtectedAction(() => onAddEntry('project'), 'add', 'project')}>Add Project</DropdownMenuItem>
-                <DropdownMenuItem className="text-sm py-2" onClick={() => handleProtectedAction(() => onAddEntry('ticker'), 'add', 'ticker')}>Add Announcement</DropdownMenuItem>
+                <DropdownMenuItem className="text-sm py-2" onClick={() => handleProtectedAction(() => onAddEntry('ticker'), 'add', 'ticker')}>Add Renewing Project</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             
@@ -958,9 +958,9 @@ function PersonnelStatusPanel({ onDeletePersonnel, onEditPersonnel }: {
   return (
     <div className="bg-card border border-border rounded-lg h-full flex flex-col overflow-hidden">
       <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border overflow-hidden">
-        {/* CTO/FL Column */}
+        {/* CTO/LEAVE Column */}
         <PersonnelColumn 
-          title="CTO/FL" 
+          title="CTO/LEAVE" 
           personnel={ctoflPersonnel} 
           settings={settings}
           onDeletePersonnel={onDeletePersonnel}
@@ -1311,7 +1311,7 @@ function ProjectRequestPanel({ onDeleteProject, onEditProject }: {
   return (
     <div className="bg-card border border-border rounded-lg h-full flex flex-col overflow-hidden">
       <div className="px-2 py-1 border-b border-border bg-muted/30">
-        <h2 className="text-base sm:text-lg lg:text-[24px] font-bold text-foreground tracking-wide">PROJECT REQUEST</h2>
+        <h2 className="text-base sm:text-lg lg:text-[24px] font-bold text-foreground tracking-wide">ONGOING PROJECT REQUEST</h2>
       </div>
       <div 
         ref={containerRef}
@@ -1937,25 +1937,25 @@ function AddTickerMessageModal({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-xl">Add Announcement</DialogTitle>
+          <DialogTitle className="text-xl">Add Renewing Project</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-5">
           {error && <p className="text-sm text-destructive">{error}</p>}
           
           <div className="space-y-2">
-            <Label htmlFor="ticker-message" className="text-base">Display Message *</Label>
+            <Label htmlFor="ticker-message" className="text-base">Renewing Project Message *</Label>
             <Input 
               id="ticker-message" 
               value={message} 
               onChange={(e) => setMessage(e.target.value)}
-              placeholder="Enter announcement message"
+              placeholder="Enter renewing project message"
               className="text-base"
             />
           </div>
           
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose} className="text-base">Cancel</Button>
-            <Button type="submit" className="text-base" disabled={isSubmitting}>{isSubmitting ? 'Adding...' : 'Add Announcement'}</Button>
+            <Button type="submit" className="text-base" disabled={isSubmitting}>{isSubmitting ? 'Adding...' : 'Add Renewing Project'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -2027,7 +2027,7 @@ function EditPersonnelModal({
 
   if (!personnel) return null;
 
-  const title = personnel.type === 'TRAVEL' ? 'Edit In Travel' : `Edit ${personnel.type === 'CTO' || personnel.type === 'FL' ? 'CTO / FL' : 'WFH'}`;
+  const title = personnel.type === 'TRAVEL' ? 'Edit In Travel' : `Edit ${personnel.type === 'CTO' || personnel.type === 'FL' ? 'CTO / LEAVE' : 'WFH'}`;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>

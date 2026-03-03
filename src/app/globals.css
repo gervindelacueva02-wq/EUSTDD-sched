@@ -132,6 +132,5 @@
 }
 
 .animate-scroll-ticker {
-  animation: scroll-ticker 30s linear infinite;
+  animation: scroll-ticker 20s linear infinite;
 }
-
