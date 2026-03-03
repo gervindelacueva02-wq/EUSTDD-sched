@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { ScheduleStore, ScheduleEvent, PersonnelStatus, Project, AppSettings, TransitionStyle } from '@/types/schedule';
+import type { ScheduleStore, ScheduleEvent, PersonnelStatus, Project, TickerMessage, AppSettings, TransitionStyle } from '@/types/schedule';
 
 // Generate unique ID
 const generateId = () => {
@@ -120,6 +120,7 @@ export const useScheduleStore = create<ScheduleStore>()((set, get) => ({
   events: demoEvents,
   personnelStatuses: demoPersonnel,
   projects: demoProjects,
+  tickerMessages: [],
   settings: defaultSettings,
   _hasHydrated: false,
 
@@ -134,6 +135,7 @@ export const useScheduleStore = create<ScheduleStore>()((set, get) => ({
           events: data.events || demoEvents,
           personnelStatuses: data.personnelStatuses || demoPersonnel,
           projects: data.projects || demoProjects,
+          tickerMessages: data.tickerMessages || [],
           settings: { ...defaultSettings, ...data.settings },
           _hasHydrated: true,
         });
@@ -164,6 +166,7 @@ export const useScheduleStore = create<ScheduleStore>()((set, get) => ({
               events: data.events || [],
               personnelStatuses: data.personnelStatuses || [],
               projects: data.projects || [],
+              tickerMessages: data.tickerMessages || [],
               settings: { ...defaultSettings, ...data.settings },
             });
           }
@@ -195,6 +198,7 @@ export const useScheduleStore = create<ScheduleStore>()((set, get) => ({
           events: state.events,
           personnelStatuses: state.personnelStatuses,
           projects: state.projects,
+          tickerMessages: state.tickerMessages,
           settings: state.settings,
         };
         
@@ -314,6 +318,26 @@ export const useScheduleStore = create<ScheduleStore>()((set, get) => ({
       projects: state.projects.map((project) =>
         project.id === id ? { ...project, number: Math.max(0, project.number - 1) } : project
       ),
+    }));
+    get().saveToServer();
+  },
+
+  // Ticker Message actions
+  addTickerMessage: (messageData) => {
+    const newMessage: TickerMessage = {
+      ...messageData,
+      id: generateId(),
+      createdAt: new Date().toISOString(),
+    };
+    set((state) => ({
+      tickerMessages: [...state.tickerMessages, newMessage],
+    }));
+    get().saveToServer();
+  },
+
+  deleteTickerMessage: (id) => {
+    set((state) => ({
+      tickerMessages: state.tickerMessages.filter((msg) => msg.id !== id),
     }));
     get().saveToServer();
   },

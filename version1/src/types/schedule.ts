@@ -43,6 +43,13 @@ export interface Project {
   createdAt: string;
 }
 
+// Ticker Message
+export interface TickerMessage {
+  id: string;
+  message: string;
+  createdAt: string;
+}
+
 // Application Settings
 export interface AppSettings {
   theme: 'light' | 'dark';
@@ -64,6 +71,7 @@ export interface ScheduleStoreState {
   events: ScheduleEvent[];
   personnelStatuses: PersonnelStatus[];
   projects: Project[];
+  tickerMessages: TickerMessage[];
   settings: AppSettings;
   _hasHydrated: boolean;
 }
@@ -86,6 +94,10 @@ export interface ScheduleStoreActions {
   deleteProject: (id: string) => void;
   incrementProject: (id: string) => void;
   decrementProject: (id: string) => void;
+  
+  // Ticker Message actions
+  addTickerMessage: (message: Omit<TickerMessage, 'id' | 'createdAt'>) => void;
+  deleteTickerMessage: (id: string) => void;
   
   // Settings actions
   updateSettings: (settings: Partial<AppSettings>) => void;

@@ -565,6 +565,7 @@ function Header({
                   <DropdownMenuItem onClick={() => handleProtectedAction(() => onAddEntry('wfh'), 'add', 'wfh')}>Add WFH</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleProtectedAction(() => onAddEntry('travel'), 'add', 'travel')}>Add In Travel</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleProtectedAction(() => onAddEntry('project'), 'add', 'project')}>Add Project</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleProtectedAction(() => onAddEntry('ticker'), 'add', 'ticker')}>Add Announcement</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
               
@@ -641,6 +642,7 @@ function Header({
                 <DropdownMenuItem className="text-sm py-2" onClick={() => handleProtectedAction(() => onAddEntry('wfh'), 'add', 'wfh')}>Add WFH</DropdownMenuItem>
                 <DropdownMenuItem className="text-sm py-2" onClick={() => handleProtectedAction(() => onAddEntry('travel'), 'add', 'travel')}>Add In Travel</DropdownMenuItem>
                 <DropdownMenuItem className="text-sm py-2" onClick={() => handleProtectedAction(() => onAddEntry('project'), 'add', 'project')}>Add Project</DropdownMenuItem>
+                <DropdownMenuItem className="text-sm py-2" onClick={() => handleProtectedAction(() => onAddEntry('ticker'), 'add', 'ticker')}>Add Announcement</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             
@@ -1895,6 +1897,72 @@ function AddProjectModal({
   );
 }
 
+// Add Ticker Message Modal
+function AddTickerMessageModal({ 
+  open, 
+  onClose 
+}: { 
+  open: boolean; 
+  onClose: () => void;
+}) {
+  const { addTickerMessage } = useScheduleStore();
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    
+    setError('');
+
+    if (!message.trim()) {
+      setError('Message is required');
+      setIsSubmitting(false);
+      return;
+    }
+
+    addTickerMessage({
+      message: message.trim(),
+    });
+
+    setMessage('');
+    setTimeout(() => setIsSubmitting(false), 500);
+    // Don't auto-close - let user close manually
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-xl">Add Announcement</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          
+          <div className="space-y-2">
+            <Label htmlFor="ticker-message" className="text-base">Display Message *</Label>
+            <Input 
+              id="ticker-message" 
+              value={message} 
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Enter announcement message"
+              className="text-base"
+            />
+          </div>
+          
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose} className="text-base">Cancel</Button>
+            <Button type="submit" className="text-base" disabled={isSubmitting}>{isSubmitting ? 'Adding...' : 'Add Announcement'}</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // Edit Personnel Modal
 function EditPersonnelModal({ 
   open, 
@@ -2603,6 +2671,57 @@ function MonthEventRow({ event, onDelete, onEdit }: { event: ScheduleEvent; onDe
   );
 }
 
+// Scrolling Ticker Component
+function ScrollingTicker() {
+  const { tickerMessages } = useScheduleStore();
+  const textRef = useRef<HTMLSpanElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [shouldScroll, setShouldScroll] = useState(false);
+  
+  // Use custom messages if available, otherwise use defaults
+  const defaultMessages = [
+    "Welcome to EUSTDD Schedule Dashboard",
+    "📋 Remember to update your status before leaving",
+    "🔔 Check upcoming events regularly"
+  ];
+  
+  const messages = tickerMessages.length > 0 
+    ? tickerMessages.map(m => m.message) 
+    : defaultMessages;
+  
+  const tickerText = messages.join("  •  ");
+
+  // Check if text exceeds container width
+  useEffect(() => {
+    const checkOverflow = () => {
+      if (textRef.current && containerRef.current) {
+        const textWidth = textRef.current.scrollWidth;
+        const containerWidth = containerRef.current.clientWidth;
+        setShouldScroll(textWidth > containerWidth);
+      }
+    };
+    
+    checkOverflow();
+    window.addEventListener('resize', checkOverflow);
+    return () => window.removeEventListener('resize', checkOverflow);
+  }, [tickerText]);
+
+  return (
+    <div ref={containerRef} className="w-full h-[72px] bg-muted border-t border-border overflow-hidden flex-shrink-0">
+      <div className="flex items-center justify-center h-full px-4">
+        <div 
+          className={`whitespace-nowrap ${shouldScroll ? 'animate-scroll-ticker hover:[animation-play-state:paused]' : ''} cursor-default`}
+          style={{ display: 'inline-block' }}
+        >
+          <span ref={textRef} className="inline-block font-semibold text-2xl text-foreground px-4">
+            {shouldScroll ? `${tickerText}  •  ${tickerText}` : tickerText}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Main Page Component
 export default function EUSTDDSchedule() {
   const { events, settings, deleteEvent, deletePersonnelStatus, deleteProject, _hasHydrated, loadFromServer, startAutoSync, stopAutoSync } = useScheduleStore();
@@ -2798,11 +2917,11 @@ export default function EUSTDDSchedule() {
     setModalType(null);
   };
 
-  // Render based on view mode
+// Render based on view mode
   const renderMainContent = () => {
     if (viewMode === 'day') {
       return (
-        <main className="flex-1 p-1 sm:p-2 grid grid-cols-1 lg:grid-cols-2 grid-rows-[auto_auto_auto_auto] lg:grid-rows-2 gap-1 sm:gap-2 max-w-[1920px] mx-auto w-full min-h-0 overflow-hidden">
+        <main className="flex-1 p-1 sm:p-2 grid grid-cols-1 lg:grid-cols-2 grid-rows-[1fr_1fr] gap-1 sm:gap-2 max-w-[1920px] mx-auto w-full min-h-0 overflow-hidden">
           <SchedulePanel 
             title="TODAY'S SCHEDULE"
             date={format(today, 'EEEE, MMMM d, yyyy')}
@@ -2858,7 +2977,11 @@ export default function EUSTDDSchedule() {
         onViewModeChange={setViewMode}
       />
       
-      {renderMainContent()}
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        {renderMainContent()}
+      </div>
+      
+      <ScrollingTicker />
 
       {/* Event Notifications */}
       <AnimatePresence>
@@ -2930,6 +3053,8 @@ export default function EUSTDDSchedule() {
       />
       
       <AddProjectModal open={modalType === 'project'} onClose={closeModal} />
+      
+      <AddTickerMessageModal open={modalType === 'ticker'} onClose={closeModal} />
       
       {/* Edit Modals */}
       <EditEventModal 
