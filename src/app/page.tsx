@@ -16,7 +16,7 @@ import {
   Pencil
 } from 'lucide-react';
 import { useScheduleStore } from '@/store/schedule-store';
-import type { ScheduleEvent, PersonnelStatus, Project, TickerMessage, EventStatus, TransitionStyle } from '@/types/schedule';
+import type { ScheduleEvent, PersonnelStatus, Project, EventStatus, TransitionStyle } from '@/types/schedule';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -42,13 +42,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
-  ContextMenuSeparator,
-} from '@/components/ui/context-menu';
 import { Checkbox } from '@/components/ui/checkbox';
 
 // Utility function to format time to 12-hour format
@@ -705,8 +698,8 @@ function EventRow({ event, onDelete, onEdit, transitionStyle, transitionSpeed, s
   const isAllDay = event.timeStart === '00:00' && event.timeEnd === '23:59';
   
   const variants = getTransitionVariants(transitionStyle, transitionSpeed);
-
-  const content = (
+  
+  return (
     <motion.div 
       variants={variants}
       initial="initial"
@@ -805,36 +798,6 @@ function EventRow({ event, onDelete, onEdit, transitionStyle, transitionSpeed, s
       </div>
     </motion.div>
   );
-
-  // Wrap with context menu if actions are available
-  if (onEdit || onDelete) {
-    return (
-      <ContextMenu>
-        <ContextMenuTrigger asChild>
-          {content}
-        </ContextMenuTrigger>
-        <ContextMenuContent>
-          {onEdit && (
-            <ContextMenuItem onClick={onEdit}>
-              <Pencil className="h-4 w-4 mr-2" />
-              Edit Event
-            </ContextMenuItem>
-          )}
-          {onDelete && (
-            <>
-              <ContextMenuSeparator />
-              <ContextMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete Event
-              </ContextMenuItem>
-            </>
-          )}
-        </ContextMenuContent>
-      </ContextMenu>
-    );
-  }
-
-  return content;
 }
 
 // Schedule Panel Component
@@ -844,7 +807,6 @@ function SchedulePanel({
   events,
   onDeleteEvent,
   onEditEvent,
-  onDoubleClick,
   showDate = false
 }: { 
   title: string;
@@ -852,7 +814,6 @@ function SchedulePanel({
   events: ScheduleEvent[];
   onDeleteEvent?: (id: string) => void;
   onEditEvent?: (event: ScheduleEvent) => void;
-  onDoubleClick?: () => void;
   showDate?: boolean;
 }) {
   const { settings } = useScheduleStore();
@@ -917,17 +878,9 @@ function SchedulePanel({
   const shouldUseAnimatePresence = !isGentleScroll;
   
   return (
-    <div 
-      className="bg-card border border-border rounded-lg h-full flex flex-col overflow-hidden cursor-pointer"
-      onDoubleClick={onDoubleClick}
-    >
+    <div className="bg-card border border-border rounded-lg h-full flex flex-col overflow-hidden">
       <div className="px-2 py-1 border-b border-border bg-muted/30 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h2 className="text-base sm:text-lg lg:text-[24px] font-bold text-foreground tracking-wide">{title}</h2>
-          <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-semibold rounded-full bg-primary/10 text-primary">
-            {events.length}
-          </span>
-        </div>
+        <h2 className="text-base sm:text-lg lg:text-[24px] font-bold text-foreground tracking-wide">{title}</h2>
         <p className="text-[10px] sm:text-xs text-muted-foreground hidden sm:block">{date}</p>
       </div>
       <div 
@@ -936,7 +889,9 @@ function SchedulePanel({
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {events.length === 0 ? (
-          <div className="flex items-center justify-center h-16" />
+          <div className="flex items-center justify-center h-16 text-muted-foreground text-sm sm:text-lg">
+            —
+          </div>
         ) : shouldUseAnimatePresence ? (
           <AnimatePresence mode="wait">
             <motion.div
@@ -981,18 +936,9 @@ function SchedulePanel({
 }
 
 // Personnel Status Panel - 3 Column Layout (stacked on mobile)
-function PersonnelStatusPanel({ 
-  onDeletePersonnel, 
-  onEditPersonnel,
-  onAddCto,
-  onAddWfh,
-  onAddTravel
-}: { 
+function PersonnelStatusPanel({ onDeletePersonnel, onEditPersonnel }: { 
   onDeletePersonnel: (id: string) => void;
   onEditPersonnel: (personnel: PersonnelStatus) => void;
-  onAddCto: () => void;
-  onAddWfh: () => void;
-  onAddTravel: () => void;
 }) {
   const { personnelStatuses, settings } = useScheduleStore();
   const today = new Date();
@@ -1019,7 +965,6 @@ function PersonnelStatusPanel({
           settings={settings}
           onDeletePersonnel={onDeletePersonnel}
           onEditPersonnel={onEditPersonnel}
-          onDoubleClick={onAddCto}
         />
         
         {/* WFH Column */}
@@ -1029,7 +974,6 @@ function PersonnelStatusPanel({
           settings={settings}
           onDeletePersonnel={onDeletePersonnel}
           onEditPersonnel={onEditPersonnel}
-          onDoubleClick={onAddWfh}
         />
         
         {/* IN TRAVEL Column */}
@@ -1039,7 +983,6 @@ function PersonnelStatusPanel({
           settings={settings}
           onDeletePersonnel={onDeletePersonnel}
           onEditPersonnel={onEditPersonnel}
-          onDoubleClick={onAddTravel}
         />
       </div>
     </div>
@@ -1052,15 +995,13 @@ function PersonnelColumn({
   personnel, 
   settings,
   onDeletePersonnel,
-  onEditPersonnel,
-  onDoubleClick
+  onEditPersonnel 
 }: { 
   title: string;
   personnel: PersonnelStatus[];
   settings: { transitionStyle: TransitionStyle; transitionSpeed: string; smoothScrollEnabled: boolean; customTransitionSeconds: number };
   onDeletePersonnel: (id: string) => void;
   onEditPersonnel: (personnel: PersonnelStatus) => void;
-  onDoubleClick: () => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const transitionSpeed = getTransitionSpeed(settings.transitionSpeed, settings.customTransitionSeconds);
@@ -1120,17 +1061,9 @@ function PersonnelColumn({
   const shouldUseAnimatePresence = !isGentleScroll;
 
   return (
-    <div 
-      className="flex flex-col overflow-hidden h-full cursor-pointer"
-      onDoubleClick={onDoubleClick}
-    >
+    <div className="flex flex-col overflow-hidden h-full">
       <div className="px-2 py-1 border-b border-border bg-muted/30 flex-shrink-0">
-        <div className="flex items-center justify-center gap-2">
-          <h3 className="text-base sm:text-lg lg:text-[24px] font-bold text-foreground tracking-wide">{title}</h3>
-          <span className="inline-flex items-center justify-center min-w-[18px] h-5 px-1.5 text-xs font-semibold rounded-full bg-primary/10 text-primary">
-            {personnel.length}
-          </span>
-        </div>
+        <h3 className="text-base sm:text-lg lg:text-[24px] font-bold text-foreground tracking-wide text-center">{title}</h3>
       </div>
       <div 
         ref={containerRef}
@@ -1138,7 +1071,7 @@ function PersonnelColumn({
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {personnel.length === 0 ? (
-          <div className="text-center py-4" />
+          <div className="text-center py-4 text-muted-foreground text-xs sm:text-sm">—</div>
         ) : shouldUseAnimatePresence ? (
           <AnimatePresence mode="wait">
             <motion.div
@@ -1182,7 +1115,7 @@ function PersonnelItemCompact({
     return `${startDate} - ${endDate}`;
   };
 
-  const content = (
+  return (
     <motion.div 
       layout
       initial={{ opacity: 0, y: 10 }}
@@ -1223,36 +1156,6 @@ function PersonnelItemCompact({
       </span>
     </motion.div>
   );
-
-  // Wrap with context menu if actions are available
-  if (onEdit || onDelete) {
-    return (
-      <ContextMenu>
-        <ContextMenuTrigger asChild>
-          {content}
-        </ContextMenuTrigger>
-        <ContextMenuContent>
-          {onEdit && (
-            <ContextMenuItem onClick={onEdit}>
-              <Pencil className="h-4 w-4 mr-2" />
-              Edit
-            </ContextMenuItem>
-          )}
-          {onDelete && (
-            <>
-              <ContextMenuSeparator />
-              <ContextMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete
-              </ContextMenuItem>
-            </>
-          )}
-        </ContextMenuContent>
-      </ContextMenu>
-    );
-  }
-
-  return content;
 }
 
 // Project Item Component
@@ -1273,7 +1176,7 @@ function ProjectItem({
   const [isFocused, setIsFocused] = useState(false);
   const showControls = isHovered || isFocused;
 
-  const content = (
+  return (
     <motion.div 
       layout
       initial={{ opacity: 0, scale: 0.95 }}
@@ -1340,58 +1243,12 @@ function ProjectItem({
       </div>
     </motion.div>
   );
-
-  // Wrap with context menu if actions are available
-  if (onEdit || onDelete) {
-    return (
-      <ContextMenu>
-        <ContextMenuTrigger asChild>
-          {content}
-        </ContextMenuTrigger>
-        <ContextMenuContent>
-          <ContextMenuItem onClick={onIncrement}>
-            <Plus className="h-4 w-4 mr-2" />
-            Increment
-          </ContextMenuItem>
-          <ContextMenuItem onClick={onDecrement}>
-            <Minus className="h-4 w-4 mr-2" />
-            Decrement
-          </ContextMenuItem>
-          {onEdit && (
-            <>
-              <ContextMenuSeparator />
-              <ContextMenuItem onClick={onEdit}>
-                <Pencil className="h-4 w-4 mr-2" />
-                Edit Project
-              </ContextMenuItem>
-            </>
-          )}
-          {onDelete && (
-            <>
-              <ContextMenuSeparator />
-              <ContextMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete Project
-              </ContextMenuItem>
-            </>
-          )}
-        </ContextMenuContent>
-      </ContextMenu>
-    );
-  }
-
-  return content;
 }
 
 // Project Request Panel
-function ProjectRequestPanel({ 
-  onDeleteProject, 
-  onEditProject,
-  onDoubleClick 
-}: { 
+function ProjectRequestPanel({ onDeleteProject, onEditProject }: { 
   onDeleteProject: (id: string) => void;
   onEditProject: (project: Project) => void;
-  onDoubleClick: () => void;
 }) {
   const { projects, incrementProject, decrementProject, settings } = useScheduleStore();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1452,15 +1309,9 @@ function ProjectRequestPanel({
   const shouldUseAnimatePresence = !isGentleScroll;
 
   return (
-    <div 
-      className="bg-card border border-border rounded-lg h-full flex flex-col overflow-hidden cursor-pointer"
-      onDoubleClick={onDoubleClick}
-    >
-      <div className="px-2 py-1 border-b border-border bg-muted/30 flex items-center gap-2">
+    <div className="bg-card border border-border rounded-lg h-full flex flex-col overflow-hidden">
+      <div className="px-2 py-1 border-b border-border bg-muted/30">
         <h2 className="text-base sm:text-lg lg:text-[24px] font-bold text-foreground tracking-wide">ONGOING PROJECT REQUEST</h2>
-        <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-semibold rounded-full bg-primary/10 text-primary">
-          {projects.length}
-        </span>
       </div>
       <div 
         ref={containerRef}
@@ -1468,7 +1319,9 @@ function ProjectRequestPanel({
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {projects.length === 0 ? (
-          <div className="flex items-center justify-center h-16" />
+          <div className="flex items-center justify-center h-16 text-muted-foreground text-sm sm:text-lg">
+            —
+          </div>
         ) : shouldUseAnimatePresence ? (
           <AnimatePresence mode="wait">
             <motion.div
@@ -1676,37 +1529,20 @@ function EditEventModal({
 // Add Event Modal
 function AddEventModal({ 
   open, 
-  onClose,
-  defaultDate
+  onClose 
 }: { 
   open: boolean; 
   onClose: () => void;
-  defaultDate?: string | null;
 }) {
   const { addEvent } = useScheduleStore();
   const [title, setTitle] = useState('');
-  const [dateStarted, setDateStarted] = useState(() => defaultDate || format(new Date(), 'yyyy-MM-dd'));
+  const [dateStarted, setDateStarted] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [timeStart, setTimeStart] = useState('09:00');
   const [timeEnd, setTimeEnd] = useState('10:00');
   const [details, setDetails] = useState('');
   const [isAllDay, setIsAllDay] = useState(false);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Reset form with defaultDate when modal opens
-  useEffect(() => {
-    if (open) {
-      queueMicrotask(() => {
-        setTitle('');
-        setDateStarted(defaultDate || format(new Date(), 'yyyy-MM-dd'));
-        setTimeStart('09:00');
-        setTimeEnd('10:00');
-        setDetails('');
-        setIsAllDay(false);
-        setError('');
-      });
-    }
-  }, [open, defaultDate]);
 
   // Handler for all-day toggle
   const handleAllDayChange = (checked: boolean) => {
@@ -1848,34 +1684,19 @@ function AddEventModal({
 function AddPersonnelModal({ 
   open, 
   onClose, 
-  type,
-  defaultDate
+  type 
 }: { 
   open: boolean; 
   onClose: () => void;
   type: 'CTO' | 'FL' | 'WFH' | 'TRAVEL';
-  defaultDate?: string | null;
 }) {
   const { addPersonnelStatus } = useScheduleStore();
   const [name, setName] = useState('');
-  const [dateStart, setDateStart] = useState(() => defaultDate || format(new Date(), 'yyyy-MM-dd'));
-  const [dateEnd, setDateEnd] = useState(() => defaultDate || format(new Date(), 'yyyy-MM-dd'));
+  const [dateStart, setDateStart] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [dateEnd, setDateEnd] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [location, setLocation] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Reset form with defaultDate when modal opens
-  useEffect(() => {
-    if (open) {
-      queueMicrotask(() => {
-        setName('');
-        setDateStart(defaultDate || format(new Date(), 'yyyy-MM-dd'));
-        setDateEnd(defaultDate || format(new Date(), 'yyyy-MM-dd'));
-        setLocation('');
-        setError('');
-      });
-    }
-  }, [open, defaultDate]);
 
   const title = type === 'TRAVEL' ? 'Add In Travel' : `Add ${type === 'CTO' || type === 'FL' ? 'CTO / FL' : 'WFH'}`;
 
@@ -2135,85 +1956,6 @@ function AddTickerMessageModal({
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose} className="text-base">Cancel</Button>
             <Button type="submit" className="text-base" disabled={isSubmitting}>{isSubmitting ? 'Adding...' : 'Add Renewing Project'}</Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// Edit Ticker Message Modal
-function EditTickerMessageModal({ 
-  open, 
-  onClose,
-  tickerMessage
-}: { 
-  open: boolean; 
-  onClose: () => void;
-  tickerMessage: TickerMessage | null;
-}) {
-  const { updateTickerMessage } = useScheduleStore();
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Populate form when ticker message changes
-  useEffect(() => {
-    if (tickerMessage) {
-      queueMicrotask(() => {
-        setMessage(tickerMessage.message);
-      });
-    }
-  }, [tickerMessage]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!tickerMessage) return;
-    
-    if (isSubmitting) return;
-    setIsSubmitting(true);
-    
-    setError('');
-
-    if (!message.trim()) {
-      setError('Message is required');
-      setIsSubmitting(false);
-      return;
-    }
-
-    updateTickerMessage(tickerMessage.id, {
-      message: message.trim(),
-    });
-
-    onClose();
-    setTimeout(() => setIsSubmitting(false), 500);
-  };
-
-  if (!tickerMessage) return null;
-
-  return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-xl">Edit Renewing Project</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {error && <p className="text-sm text-destructive">{error}</p>}
-          
-          <div className="space-y-2">
-            <Label htmlFor="edit-ticker-message" className="text-base">Renewing Project Message *</Label>
-            <Input 
-              id="edit-ticker-message" 
-              value={message} 
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Enter renewing project message"
-              className="text-base"
-            />
-          </div>
-          
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} className="text-base">Cancel</Button>
-            <Button type="submit" className="text-base" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Save Changes'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -2665,55 +2407,14 @@ function SettingsModal({
   );
 }
 
-// Get personnel type color
-const getPersonnelTypeColor = (type: PersonnelStatus['type']): string => {
-  switch (type) {
-    case 'CTO':
-    case 'FL':
-      return '#f97316'; // orange
-    case 'WFH':
-      return '#22c55e'; // green
-    case 'TRAVEL':
-      return '#3b82f6'; // blue
-    default:
-      return '#6b7280'; // gray
-  }
-};
-
-// Get personnel type label
-const getPersonnelTypeLabel = (type: PersonnelStatus['type']): string => {
-  switch (type) {
-    case 'CTO':
-    case 'FL':
-      return 'CTO/FL';
-    case 'WFH':
-      return 'WFH';
-    case 'TRAVEL':
-      return 'TRAVEL';
-    default:
-      return type;
-  }
-};
-
-// Get personnel for a specific day (within date range)
-const getPersonnelForDay = (personnel: PersonnelStatus[], date: Date): PersonnelStatus[] => {
-  const dateStr = format(date, 'yyyy-MM-dd');
-  return personnel.filter((p) => {
-    return dateStr >= p.dateStart && dateStr <= p.dateEnd;
-  });
-};
-
 // Week View Component
-function WeekView({ events, personnelStatuses, onDeleteEvent, onEditEvent, onDeletePersonnel, onEditPersonnel, onDoubleClick, weekStart }: { 
+function WeekView({ events, onDeleteEvent, onEditEvent, weekStart }: { 
   events: ScheduleEvent[]; 
-  personnelStatuses: PersonnelStatus[];
   onDeleteEvent: (id: string) => void;
   onEditEvent: (event: ScheduleEvent) => void;
-  onDeletePersonnel: (id: string) => void;
-  onEditPersonnel: (personnel: PersonnelStatus) => void;
-  onDoubleClick: (date: string) => void;
   weekStart: Date;
 }) {
+  const { settings } = useScheduleStore();
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   
   const getEventsForDay = (date: Date) => {
@@ -2731,36 +2432,24 @@ function WeekView({ events, personnelStatuses, onDeleteEvent, onEditEvent, onDel
       <div className="flex-1 grid grid-cols-7 divide-x divide-border overflow-hidden">
         {days.map((day, index) => {
           const date = addDays(weekStart, index);
-          const dateStr = format(date, 'yyyy-MM-dd');
           const dayEvents = getEventsForDay(date);
-          const dayPersonnel = getPersonnelForDay(personnelStatuses, date);
-          const totalItems = dayEvents.length + dayPersonnel.length;
-          const isToday = format(new Date(), 'yyyy-MM-dd') === dateStr;
+          const isToday = format(new Date(), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd');
           
           return (
-            <div 
-              key={day} 
-              className="flex flex-col overflow-hidden min-h-0 cursor-pointer"
-              onDoubleClick={() => onDoubleClick(dateStr)}
-            >
+            <div key={day} className="flex flex-col overflow-hidden min-h-0">
               <div className={`px-2 py-2 text-center border-b border-border ${isToday ? 'bg-primary/10' : 'bg-muted/20'}`}>
                 <div className="text-sm font-medium text-muted-foreground">{day}</div>
                 <div className={`text-lg font-bold ${isToday ? 'text-primary' : 'text-foreground'}`}>
                   {format(date, 'd')}
                 </div>
               </div>
-              <div className="flex-1 min-h-0 overflow-y-auto p-1.5 space-y-1">
-                {totalItems === 0 ? (
+              <div className="flex-1 min-h-0 overflow-hidden p-1.5 space-y-1">
+                {dayEvents.length === 0 ? (
                   <div className="text-center py-4 text-muted-foreground text-sm">—</div>
                 ) : (
-                  <>
-                    {dayEvents.map((event) => (
-                      <WeekEventRow key={event.id} event={event} onDelete={() => onDeleteEvent(event.id)} onEdit={() => onEditEvent(event)} />
-                    ))}
-                    {dayPersonnel.map((personnel) => (
-                      <WeekPersonnelRow key={personnel.id} personnel={personnel} onDelete={() => onDeletePersonnel(personnel.id)} onEdit={() => onEditPersonnel(personnel)} />
-                    ))}
-                  </>
+                  dayEvents.map((event) => (
+                    <WeekEventRow key={event.id} event={event} onDelete={() => onDeleteEvent(event.id)} onEdit={() => onEditEvent(event)} />
+                  ))
                 )}
               </div>
             </div>
@@ -2819,67 +2508,16 @@ function WeekEventRow({ event, onDelete, onEdit }: { event: ScheduleEvent; onDel
   );
 }
 
-// Week Personnel Row (compact)
-function WeekPersonnelRow({ personnel, onDelete, onEdit }: { personnel: PersonnelStatus; onDelete?: () => void; onEdit?: () => void }) {
-  const typeColor = getPersonnelTypeColor(personnel.type);
-  const typeLabel = getPersonnelTypeLabel(personnel.type);
-
-  return (
-    <motion.div 
-      layout
-      initial={{ opacity: 0, y: 5 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -5 }}
-      className="flex items-start gap-1 py-1 px-1.5 hover:bg-muted/50 rounded group transition-colors"
-    >
-      <StatusDot color={typeColor} size="sm" />
-      <div className="flex-1 min-w-0">
-        <div className="font-medium text-xs text-foreground truncate">{personnel.name}</div>
-        <div className="text-xs text-muted-foreground">
-          {typeLabel}
-        </div>
-      </div>
-      <div className="flex items-center gap-0.5 flex-shrink-0">
-        {onEdit && (
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={onEdit}
-          >
-            <Pencil className="h-2.5 w-2.5 text-muted-foreground" />
-          </Button>
-        )}
-        {onDelete && (
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={onDelete}
-          >
-            <Trash2 className="h-2.5 w-2.5 text-destructive" />
-          </Button>
-        )}
-      </div>
-    </motion.div>
-  );
-}
-
 // Month View Component
-function MonthView({ events, personnelStatuses, onDeleteEvent, onEditEvent, onDeletePersonnel, onEditPersonnel, onDoubleClick, monthStart }: { 
+function MonthView({ events, onDeleteEvent, onEditEvent, monthStart }: { 
   events: ScheduleEvent[]; 
-  personnelStatuses: PersonnelStatus[];
   onDeleteEvent: (id: string) => void;
   onEditEvent: (event: ScheduleEvent) => void;
-  onDeletePersonnel: (id: string) => void;
-  onEditPersonnel: (personnel: PersonnelStatus) => void;
-  onDoubleClick: (date: string) => void;
   monthStart: Date;
 }) {
   const { settings } = useScheduleStore();
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Generate all days for the calendar grid
   const calendarDays = useMemo(() => {
@@ -2915,12 +2553,7 @@ function MonthView({ events, personnelStatuses, onDeleteEvent, onEditEvent, onDe
       .sort((a, b) => a.timeStart.localeCompare(b.timeStart));
   }, [events]);
 
-  const getPersonnelForDayCallback = useCallback((date: Date) => {
-    return getPersonnelForDay(personnelStatuses, date);
-  }, [personnelStatuses]);
-
   const selectedDateEvents = selectedDate ? getEventsForDay(selectedDate) : [];
-  const selectedDatePersonnel = selectedDate ? getPersonnelForDayCallback(selectedDate) : [];
   const transitionSpeed = getTransitionSpeed(settings.transitionSpeed, settings.customTransitionSeconds);
 
   return (
@@ -2947,38 +2580,14 @@ function MonthView({ events, personnelStatuses, onDeleteEvent, onEditEvent, onDe
             <div key={weekIndex} className="grid grid-cols-7 divide-x divide-border">
               {week.map((date, dayIndex) => {
                 const dayEvents = getEventsForDay(date);
-                const dayPersonnel = getPersonnelForDayCallback(date);
-                const totalItems = dayEvents.length + dayPersonnel.length;
-                const dateStr = format(date, 'yyyy-MM-dd');
                 const isCurrentMonth = format(date, 'M') === format(monthStart, 'M');
-                const isToday = format(new Date(), 'yyyy-MM-dd') === dateStr;
-                
-                const handleClick = () => {
-                  // Clear any existing timeout
-                  if (clickTimeoutRef.current) {
-                    clearTimeout(clickTimeoutRef.current);
-                  }
-                  // Set a timeout for single click (250ms delay to detect double-click)
-                  clickTimeoutRef.current = setTimeout(() => {
-                    setSelectedDate(date);
-                  }, 250);
-                };
-                
-                const handleDoubleClick = () => {
-                  // Clear the single-click timeout
-                  if (clickTimeoutRef.current) {
-                    clearTimeout(clickTimeoutRef.current);
-                    clickTimeoutRef.current = null;
-                  }
-                  onDoubleClick(dateStr);
-                };
+                const isToday = format(new Date(), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd');
                 
                 return (
                   <div 
                     key={dayIndex} 
                     className={`flex flex-col overflow-hidden cursor-pointer hover:bg-muted/20 transition-colors ${!isCurrentMonth ? 'bg-muted/30' : ''} ${isToday ? 'bg-primary/5' : ''}`}
-                    onClick={handleClick}
-                    onDoubleClick={handleDoubleClick}
+                    onClick={() => setSelectedDate(date)}
                   >
                     <div className={`px-1 py-0.5 text-right ${isToday ? 'bg-primary text-primary-foreground' : ''}`}>
                       <span className={`text-xs font-medium ${isToday ? '' : isCurrentMonth ? 'text-foreground' : 'text-muted-foreground'}`}>
@@ -2986,14 +2595,11 @@ function MonthView({ events, personnelStatuses, onDeleteEvent, onEditEvent, onDe
                       </span>
                     </div>
                     <div className="flex-1 overflow-hidden p-0.5 space-y-0.5">
-                      {dayEvents.slice(0, 3).map((event) => (
+                      {dayEvents.slice(0, 4).map((event) => (
                         <MonthEventRow key={event.id} event={event} onDelete={() => onDeleteEvent(event.id)} onEdit={() => onEditEvent(event)} />
                       ))}
-                      {dayPersonnel.slice(0, 4 - Math.min(dayEvents.length, 3)).map((personnel) => (
-                        <MonthPersonnelRow key={personnel.id} personnel={personnel} onDelete={() => onDeletePersonnel(personnel.id)} onEdit={() => onEditPersonnel(personnel)} />
-                      ))}
-                      {totalItems > 4 && (
-                        <div className="text-xs text-muted-foreground text-center">+{totalItems - 4} more</div>
+                      {dayEvents.length > 4 && (
+                        <div className="text-xs text-muted-foreground text-center">+{dayEvents.length - 4} more</div>
                       )}
                     </div>
                   </div>
@@ -3013,29 +2619,19 @@ function MonthView({ events, personnelStatuses, onDeleteEvent, onEditEvent, onDe
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-2 max-h-96 overflow-y-auto">
-            {selectedDateEvents.length === 0 && selectedDatePersonnel.length === 0 ? (
+            {selectedDateEvents.length === 0 ? (
               <p className="text-muted-foreground text-center py-8">No events on this day</p>
             ) : (
-              <>
-                {selectedDateEvents.map((event) => (
-                  <EventRow 
-                    key={event.id}
-                    event={event}
-                    onDelete={() => onDeleteEvent(event.id)}
-                    onEdit={() => { setSelectedDate(null); onEditEvent(event); }}
-                    transitionStyle="static"
-                    transitionSpeed={transitionSpeed}
-                  />
-                ))}
-                {selectedDatePersonnel.map((personnel) => (
-                  <DialogPersonnelRow 
-                    key={personnel.id}
-                    personnel={personnel}
-                    onDelete={() => onDeletePersonnel(personnel.id)}
-                    onEdit={() => { setSelectedDate(null); onEditPersonnel(personnel); }}
-                  />
-                ))}
-              </>
+              selectedDateEvents.map((event) => (
+                <EventRow 
+                  key={event.id}
+                  event={event}
+                  onDelete={() => onDeleteEvent(event.id)}
+                  onEdit={() => { setSelectedDate(null); onEditEvent(event); }}
+                  transitionStyle="static"
+                  transitionSpeed={transitionSpeed}
+                />
+              ))
             )}
           </div>
         </DialogContent>
@@ -3075,96 +2671,25 @@ function MonthEventRow({ event, onDelete, onEdit }: { event: ScheduleEvent; onDe
   );
 }
 
-// Month Personnel Row (very compact)
-function MonthPersonnelRow({ personnel, onDelete, onEdit }: { personnel: PersonnelStatus; onDelete?: () => void; onEdit?: () => void }) {
-  const typeColor = getPersonnelTypeColor(personnel.type);
-
-  return (
-    <motion.div 
-      layout
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="flex items-center gap-0.5 py-0.5 px-1 hover:bg-muted/50 rounded group transition-colors cursor-pointer"
-      title={`${personnel.name} - ${getPersonnelTypeLabel(personnel.type)}`}
-    >
-      <StatusDot color={typeColor} size="sm" />
-      <span className="text-xs text-foreground truncate flex-1">{personnel.name}</span>
-      {onEdit && (
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity"
-          onClick={(e) => { e.stopPropagation(); onEdit(); }}
-        >
-          <Pencil className="h-2 w-2 text-muted-foreground" />
-        </Button>
-      )}
-    </motion.div>
-  );
-}
-
-// Dialog Personnel Row (for month view day detail)
-function DialogPersonnelRow({ personnel, onDelete, onEdit }: { personnel: PersonnelStatus; onDelete?: () => void; onEdit?: () => void }) {
-  const typeColor = getPersonnelTypeColor(personnel.type);
-  const typeLabel = getPersonnelTypeLabel(personnel.type);
-
-  return (
-    <motion.div 
-      layout
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      className="flex items-start gap-2 py-2 px-3 hover:bg-muted/50 rounded group transition-colors"
-    >
-      <StatusDot color={typeColor} size="md" className="mt-1" />
-      <div className="flex-1 min-w-0">
-        <span className="font-medium text-base text-foreground">{personnel.name}</span>
-        <div className="text-sm text-muted-foreground">
-          {typeLabel} • {format(parseISO(personnel.dateStart), 'MMM d')} - {format(parseISO(personnel.dateEnd), 'MMM d')}
-          {personnel.location && ` • ${personnel.location}`}
-        </div>
-      </div>
-      <div className="flex items-center gap-0.5">
-        {onEdit && (
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={onEdit}
-          >
-            <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-          </Button>
-        )}
-        {onDelete && (
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={onDelete}
-          >
-            <Trash2 className="h-3.5 w-3.5 text-destructive" />
-          </Button>
-        )}
-      </div>
-    </motion.div>
-  );
-}
-
 // Scrolling Ticker Component
-function ScrollingTicker({ 
-  onEditTicker,
-  onDeleteTicker 
-}: { 
-  onEditTicker: (ticker: TickerMessage) => void;
-  onDeleteTicker: (id: string) => void;
-}) {
+function ScrollingTicker() {
   const { tickerMessages } = useScheduleStore();
   const textRef = useRef<HTMLSpanElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [shouldScroll, setShouldScroll] = useState(false);
   
-  const tickerText = tickerMessages.map(m => m.message).join("  •  ");
+  // Use custom messages if available, otherwise use defaults
+  const defaultMessages = [
+    "Welcome to EUSTDD Schedule Dashboard",
+    "📋 Remember to update your status before leaving",
+    "🔔 Check upcoming events regularly"
+  ];
+  
+  const messages = tickerMessages.length > 0 
+    ? tickerMessages.map(m => m.message) 
+    : defaultMessages;
+  
+  const tickerText = messages.join("  •  ");
 
   // Check if text exceeds container width
   useEffect(() => {
@@ -3181,11 +2706,6 @@ function ScrollingTicker({
     return () => window.removeEventListener('resize', checkOverflow);
   }, [tickerText]);
 
-  // Auto-hide if no ticker entries
-  if (tickerMessages.length === 0) {
-    return null;
-  }
-
   return (
     <div ref={containerRef} className="w-full h-[72px] bg-muted border-t border-border overflow-hidden flex-shrink-0">
       <div className="flex items-center justify-center h-full px-4">
@@ -3193,40 +2713,8 @@ function ScrollingTicker({
           className={`whitespace-nowrap ${shouldScroll ? 'animate-scroll-ticker hover:[animation-play-state:paused]' : ''} cursor-default`}
           style={{ display: 'inline-block' }}
         >
-          <span ref={textRef} className="inline-flex items-center gap-6 font-semibold text-2xl text-foreground px-4">
-            {shouldScroll ? (
-              <>
-                {tickerMessages.map((ticker, index) => (
-                  <TickerItem 
-                    key={`${ticker.id}-${index}`}
-                    ticker={ticker}
-                    onEdit={onEditTicker}
-                    onDelete={onDeleteTicker}
-                    showSeparator={index < tickerMessages.length - 1}
-                  />
-                ))}
-                <span className="text-muted-foreground">•</span>
-                {tickerMessages.map((ticker, index) => (
-                  <TickerItem 
-                    key={`${ticker.id}-dup-${index}`}
-                    ticker={ticker}
-                    onEdit={onEditTicker}
-                    onDelete={onDeleteTicker}
-                    showSeparator={index < tickerMessages.length - 1}
-                  />
-                ))}
-              </>
-            ) : (
-              tickerMessages.map((ticker, index) => (
-                <TickerItem 
-                  key={`${ticker.id}-${index}`}
-                  ticker={ticker}
-                  onEdit={onEditTicker}
-                  onDelete={onDeleteTicker}
-                  showSeparator={index < tickerMessages.length - 1}
-                />
-              ))
-            )}
+          <span ref={textRef} className="inline-block font-semibold text-2xl text-foreground px-4">
+            {shouldScroll ? `${tickerText}  •  ${tickerText}` : tickerText}
           </span>
         </div>
       </div>
@@ -3234,82 +2722,17 @@ function ScrollingTicker({
   );
 }
 
-// Ticker Item Component with hover controls
-function TickerItem({ 
-  ticker, 
-  onEdit, 
-  onDelete,
-  showSeparator 
-}: { 
-  ticker: TickerMessage;
-  onEdit: (ticker: TickerMessage) => void;
-  onDelete: (id: string) => void;
-  showSeparator: boolean;
-}) {
-  const content = (
-    <span className="inline-flex items-center gap-2 group relative">
-      <span className="text-foreground">{ticker.message}</span>
-      <span className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 ml-1">
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="h-6 w-6 hover:bg-background/50"
-          onClick={(e) => {
-            e.stopPropagation();
-            onEdit(ticker);
-          }}
-        >
-          <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-        </Button>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="h-6 w-6 hover:bg-background/50"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(ticker.id);
-          }}
-        >
-          <Trash2 className="h-3.5 w-3.5 text-destructive" />
-        </Button>
-      </span>
-      {showSeparator && <span className="text-muted-foreground ml-2">•</span>}
-    </span>
-  );
-
-  return (
-    <ContextMenu>
-      <ContextMenuTrigger asChild>
-        {content}
-      </ContextMenuTrigger>
-      <ContextMenuContent>
-        <ContextMenuItem onClick={() => onEdit(ticker)}>
-          <Pencil className="h-4 w-4 mr-2" />
-          Edit
-        </ContextMenuItem>
-        <ContextMenuSeparator />
-        <ContextMenuItem onClick={() => onDelete(ticker.id)} className="text-destructive focus:text-destructive">
-          <Trash2 className="h-4 w-4 mr-2" />
-          Delete
-        </ContextMenuItem>
-      </ContextMenuContent>
-    </ContextMenu>
-  );
-}
-
 // Main Page Component
 export default function EUSTDDSchedule() {
-  const { events, personnelStatuses, settings, deleteEvent, deletePersonnelStatus, deleteProject, deleteTickerMessage, _hasHydrated, loadFromServer, startAutoSync, stopAutoSync } = useScheduleStore();
+  const { events, settings, deleteEvent, deletePersonnelStatus, deleteProject, _hasHydrated, loadFromServer, startAutoSync, stopAutoSync } = useScheduleStore();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [modalType, setModalType] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'day' | 'week' | 'month'>('day');
-  const [prefilledDate, setPrefilledDate] = useState<string | null>(null);
   
   // Edit state
   const [editingEvent, setEditingEvent] = useState<ScheduleEvent | null>(null);
   const [editingPersonnel, setEditingPersonnel] = useState<PersonnelStatus | null>(null);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
-  const [editingTicker, setEditingTicker] = useState<TickerMessage | null>(null);
   
   // Session-based PIN protection
   const [isSessionUnlocked, setIsSessionUnlocked] = useState(false);
@@ -3486,18 +2909,12 @@ export default function EUSTDDSchedule() {
   // Month view
   const monthStart = startOfMonth(today);
 
-  const handleAddEntry = (type: string, date?: string) => {
+  const handleAddEntry = (type: string) => {
     setModalType(type);
-    if (date) {
-      setPrefilledDate(date);
-    } else {
-      setPrefilledDate(null);
-    }
   };
 
   const closeModal = () => {
     setModalType(null);
-    setPrefilledDate(null);
   };
 
 // Render based on view mode
@@ -3511,7 +2928,6 @@ export default function EUSTDDSchedule() {
             events={todayEvents}
             onDeleteEvent={deleteEvent}
             onEditEvent={setEditingEvent}
-            onDoubleClick={() => setModalType('event')}
           />
           
           <SchedulePanel 
@@ -3520,22 +2936,11 @@ export default function EUSTDDSchedule() {
             events={tomorrowEvents}
             onDeleteEvent={deleteEvent}
             onEditEvent={setEditingEvent}
-            onDoubleClick={() => setModalType('event')}
           />
           
-          <PersonnelStatusPanel 
-            onDeletePersonnel={deletePersonnelStatus} 
-            onEditPersonnel={setEditingPersonnel}
-            onAddCto={() => setModalType('cto')}
-            onAddWfh={() => setModalType('wfh')}
-            onAddTravel={() => setModalType('travel')}
-          />
+          <PersonnelStatusPanel onDeletePersonnel={deletePersonnelStatus} onEditPersonnel={setEditingPersonnel} />
           
-          <ProjectRequestPanel 
-            onDeleteProject={deleteProject} 
-            onEditProject={setEditingProject}
-            onDoubleClick={() => setModalType('project')}
-          />
+          <ProjectRequestPanel onDeleteProject={deleteProject} onEditProject={setEditingProject} />
         </main>
       );
     } else if (viewMode === 'week') {
@@ -3543,12 +2948,8 @@ export default function EUSTDDSchedule() {
         <main className="flex-1 p-1 sm:p-2 flex flex-col min-h-0 max-w-[1920px] mx-auto w-full overflow-hidden">
           <WeekView 
             events={events}
-            personnelStatuses={personnelStatuses}
             onDeleteEvent={deleteEvent}
             onEditEvent={setEditingEvent}
-            onDeletePersonnel={deletePersonnelStatus}
-            onEditPersonnel={setEditingPersonnel}
-            onDoubleClick={(date) => handleAddEntry('event', date)}
             weekStart={weekStart}
           />
         </main>
@@ -3558,12 +2959,8 @@ export default function EUSTDDSchedule() {
         <main className="flex-1 p-1 sm:p-2 flex flex-col min-h-0 max-w-[1920px] mx-auto w-full overflow-hidden">
           <MonthView 
             events={events}
-            personnelStatuses={personnelStatuses}
             onDeleteEvent={deleteEvent}
             onEditEvent={setEditingEvent}
-            onDeletePersonnel={deletePersonnelStatus}
-            onEditPersonnel={setEditingPersonnel}
-            onDoubleClick={(date) => handleAddEntry('event', date)}
             monthStart={monthStart}
           />
         </main>
@@ -3584,10 +2981,7 @@ export default function EUSTDDSchedule() {
         {renderMainContent()}
       </div>
       
-      <ScrollingTicker 
-        onEditTicker={setEditingTicker}
-        onDeleteTicker={deleteTickerMessage}
-      />
+      <ScrollingTicker />
 
       {/* Event Notifications */}
       <AnimatePresence>
@@ -3638,27 +3032,24 @@ export default function EUSTDDSchedule() {
       {/* Modals */}
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       
-      <AddEventModal open={modalType === 'event'} onClose={closeModal} defaultDate={prefilledDate} />
+      <AddEventModal open={modalType === 'event'} onClose={closeModal} />
       
       <AddPersonnelModal 
         open={modalType === 'cto'} 
         onClose={closeModal} 
         type="CTO"
-        defaultDate={prefilledDate}
       />
       
       <AddPersonnelModal 
         open={modalType === 'wfh'} 
         onClose={closeModal} 
         type="WFH"
-        defaultDate={prefilledDate}
       />
       
       <AddPersonnelModal 
         open={modalType === 'travel'} 
         onClose={closeModal} 
         type="TRAVEL"
-        defaultDate={prefilledDate}
       />
       
       <AddProjectModal open={modalType === 'project'} onClose={closeModal} />
@@ -3682,12 +3073,6 @@ export default function EUSTDDSchedule() {
         open={!!editingProject} 
         onClose={() => setEditingProject(null)} 
         project={editingProject}
-      />
-      
-      <EditTickerMessageModal 
-        open={!!editingTicker} 
-        onClose={() => setEditingTicker(null)} 
-        tickerMessage={editingTicker}
       />
     </div>
   );

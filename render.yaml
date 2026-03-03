@@ -1,0 +1,11 @@
+services:
+  # Web Service
+  - type: web
+    name: eustdd-schedule
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npx prisma db push --accept-data-loss && npm run start
+    envVars:
+      - key: NODE_VERSION
+        value: "20"

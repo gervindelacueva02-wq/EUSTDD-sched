@@ -97,7 +97,6 @@ export interface ScheduleStoreActions {
   
   // Ticker Message actions
   addTickerMessage: (message: Omit<TickerMessage, 'id' | 'createdAt'>) => void;
-  updateTickerMessage: (id: string, message: Partial<Omit<TickerMessage, 'id' | 'createdAt'>>) => void;
   deleteTickerMessage: (id: string) => void;
   
   // Settings actions
