@@ -335,6 +335,15 @@ export const useScheduleStore = create<ScheduleStore>()((set, get) => ({
     get().saveToServer();
   },
 
+  updateTickerMessage: (id, messageData) => {
+    set((state) => ({
+      tickerMessages: state.tickerMessages.map((msg) =>
+        msg.id === id ? { ...msg, ...messageData } : msg
+      ),
+    }));
+    get().saveToServer();
+  },
+
   deleteTickerMessage: (id) => {
     set((state) => ({
       tickerMessages: state.tickerMessages.filter((msg) => msg.id !== id),
