@@ -3511,7 +3511,7 @@ export default function EUSTDDSchedule() {
             events={todayEvents}
             onDeleteEvent={deleteEvent}
             onEditEvent={setEditingEvent}
-            onDoubleClick={() => setModalType('event')}
+           onDoubleClick={() => handleAddEntry('event', format(today, 'yyyy-MM-dd'))}
           />
           
           <SchedulePanel 
@@ -3520,7 +3520,7 @@ export default function EUSTDDSchedule() {
             events={tomorrowEvents}
             onDeleteEvent={deleteEvent}
             onEditEvent={setEditingEvent}
-            onDoubleClick={() => setModalType('event')}
+            onDoubleClick={() => handleAddEntry('event', format(tomorrow, 'yyyy-MM-dd'))}
           />
           
           <PersonnelStatusPanel 
