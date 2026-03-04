@@ -160,94 +160,43 @@ const getScrollSpeed = (speed: string): number => {
 function useOverflowTransition<T>(
   items: T[],
   containerRef: React.RefObject<HTMLDivElement | null>,
-  itemHeight: number = 32, // Approximate height per item in pixels (used as fallback)
+  itemHeight: number = 32, // Approximate height per item in pixels
   settings: { transitionStyle: TransitionStyle; transitionSpeed: string; smoothScrollEnabled: boolean; customTransitionSeconds: number }
 ) {
   const [currentPage, setCurrentPage] = useState(0);
   const [hasOverflow, setHasOverflow] = useState(false);
-  const [pageItems, setPageItems] = useState<{ start: number; end: number }[]>([{ start: 0, end: 0 }]);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const scrollPositionRef = useRef(0);
   const animationRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const isAnimatingRef = useRef(false);
 
-  // Check for overflow and calculate page breaks based on actual item heights
+  // Check for overflow and calculate items per page
   useEffect(() => {
-    const calculatePages = () => {
-      if (!containerRef.current) return;
-      
-      const containerHeight = containerRef.current.clientHeight;
-      const contentElement = containerRef.current.querySelector('[data-content-measure]');
-      
-      if (!contentElement) {
-        // Fallback to estimation if content element not found
-        const availableHeight = containerHeight - 12;
-        const totalItemHeight = items.length * itemHeight;
-        setHasOverflow(totalItemHeight > availableHeight);
-        const estimatedItemsPerPage = Math.max(1, Math.floor(containerHeight / itemHeight));
-        const totalPages = Math.ceil(items.length / estimatedItemsPerPage);
-        const pages: { start: number; end: number }[] = [];
-        for (let i = 0; i < totalPages; i++) {
-          pages.push({
-            start: i * estimatedItemsPerPage,
-            end: Math.min((i + 1) * estimatedItemsPerPage, items.length)
-          });
-        }
-        setPageItems(pages.length > 0 ? pages : [{ start: 0, end: items.length }]);
-        return;
-      }
-
-      const actualContentHeight = contentElement.scrollHeight;
-      setHasOverflow(actualContentHeight > containerHeight);
-
-      // Get all individual item elements
-      const itemElements = contentElement.querySelectorAll('[data-item-index]');
-      
-      if (itemElements.length === 0) {
-        // No items measured yet, use estimation
-        const estimatedItemsPerPage = Math.max(1, Math.floor(containerHeight / itemHeight));
-        const totalPages = Math.ceil(items.length / estimatedItemsPerPage);
-        const pages: { start: number; end: number }[] = [];
-        for (let i = 0; i < totalPages; i++) {
-          pages.push({
-            start: i * estimatedItemsPerPage,
-            end: Math.min((i + 1) * estimatedItemsPerPage, items.length)
-          });
-        }
-        setPageItems(pages.length > 0 ? pages : [{ start: 0, end: items.length }]);
-        return;
-      }
-
-      // Calculate page breaks based on actual heights
-      const pages: { start: number; end: number }[] = [];
-      let currentPageStart = 0;
-      let currentHeight = 0;
-
-      itemElements.forEach((el, index) => {
-        const itemHeight = (el as HTMLElement).offsetHeight;
+    const checkOverflow = () => {
+      if (containerRef.current) {
+        const containerHeight = containerRef.current.clientHeight;
+        const calculatedItemsPerPage = Math.floor(containerHeight / itemHeight);
+        setItemsPerPage(Math.max(1, calculatedItemsPerPage));
         
-        // If adding this item would exceed container height, start new page
-        if (currentHeight + itemHeight > containerHeight && currentHeight > 0) {
-          pages.push({ start: currentPageStart, end: index });
-          currentPageStart = index;
-          currentHeight = itemHeight;
+        // Measure actual content height instead of estimating
+        const contentElement = containerRef.current.querySelector('[data-content-measure]');
+        if (contentElement) {
+          const actualContentHeight = contentElement.scrollHeight;
+          setHasOverflow(actualContentHeight > containerHeight);
         } else {
-          currentHeight += itemHeight;
+          // Fallback to estimation if content element not found
+          const availableHeight = containerHeight - 12;
+          const totalItemHeight = items.length * itemHeight;
+          setHasOverflow(totalItemHeight > availableHeight);
         }
-      });
-
-      // Add the last page
-      if (currentPageStart < items.length) {
-        pages.push({ start: currentPageStart, end: items.length });
       }
-
-      setPageItems(pages.length > 0 ? pages : [{ start: 0, end: items.length }]);
     };
 
     // Use requestAnimationFrame for initial check to ensure DOM is ready
     const rafId = requestAnimationFrame(() => {
-      calculatePages();
+      checkOverflow();
     });
     
     // Use ResizeObserver for more reliable container size detection
@@ -255,15 +204,15 @@ function useOverflowTransition<T>(
     if (typeof ResizeObserver !== 'undefined' && containerRef.current) {
       resizeObserver = new ResizeObserver(() => {
         // Small delay to ensure container dimensions are updated
-        requestAnimationFrame(calculatePages);
+        requestAnimationFrame(checkOverflow);
       });
       resizeObserver.observe(containerRef.current);
     }
     
-    window.addEventListener('resize', calculatePages);
+    window.addEventListener('resize', checkOverflow);
     return () => {
       cancelAnimationFrame(rafId);
-      window.removeEventListener('resize', calculatePages);
+      window.removeEventListener('resize', checkOverflow);
       if (resizeObserver) {
         resizeObserver.disconnect();
       }
@@ -271,12 +220,12 @@ function useOverflowTransition<T>(
   }, [items.length, itemHeight, containerRef]);
 
   // Calculate total pages
-  const totalPages = pageItems.length;
+  const totalPages = Math.max(1, Math.ceil(items.length / itemsPerPage));
 
   // Get current page items
   const currentItems = hasOverflow && 
     (settings.transitionStyle === 'fade' || settings.transitionStyle === 'slideUp' || settings.transitionStyle === 'slideLeft')
-    ? items.slice(pageItems[currentPage]?.start || 0, pageItems[currentPage]?.end || items.length)
+    ? items.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage)
     : items;
 
   // Cleanup function for all animations
@@ -321,7 +270,7 @@ function useOverflowTransition<T>(
     }, duration);
 
     return () => cleanupAnimations();
-  }, [hasOverflow, settings.transitionStyle, settings.transitionSpeed, totalPages, cleanupAnimations]);
+  }, [hasOverflow, settings.transitionStyle, settings.transitionSpeed, totalPages, itemsPerPage, cleanupAnimations]);
 
   // Continuous scroll for verticalAutoScroll and gentleContinuousScroll
   useEffect(() => {
@@ -419,7 +368,7 @@ function useOverflowTransition<T>(
     hasOverflow,
     currentPage,
     totalPages,
-    pageItems,
+    itemsPerPage
   };
 }
 
@@ -742,14 +691,13 @@ function StatusDot({ color, size = 'md', className = '' }: { color: string; size
 }
 
 // Event Row Component
-function EventRow({ event, onDelete, onEdit, transitionStyle, transitionSpeed, showDate, index }: { 
+function EventRow({ event, onDelete, onEdit, transitionStyle, transitionSpeed, showDate }: { 
   event: ScheduleEvent; 
   onDelete?: () => void;
   onEdit?: () => void;
   transitionStyle: TransitionStyle;
   transitionSpeed: number;
   showDate?: boolean;
-  index?: number;
 }) {
   const { settings } = useScheduleStore();
   const status = getEventStatus(event);
@@ -765,7 +713,6 @@ function EventRow({ event, onDelete, onEdit, transitionStyle, transitionSpeed, s
       animate="animate"
       exit="exit"
       layout
-      data-item-index={index}
       className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4 py-2 px-2 sm:px-3 hover:bg-muted/50 rounded group transition-colors"
     >
       {/* Mobile Layout: Single column with status dot, title, and time */}
@@ -913,7 +860,7 @@ function SchedulePanel({
   const containerRef = useRef<HTMLDivElement>(null);
   
   // Use overflow transition hook (item height: 20px font * 2 lines + padding = ~50px per item)
-  const { currentItems, hasOverflow, currentPage, totalPages, pageItems } = useOverflowTransition(
+  const { currentItems, hasOverflow, currentPage, totalPages } = useOverflowTransition(
     events,
     containerRef,
     50,
@@ -957,19 +904,6 @@ function SchedulePanel({
   // For gentle continuous scroll, duplicate items for seamless loop
   const isGentleScroll = settings.transitionStyle === 'gentleContinuousScroll';
   const displayItems = hasOverflow && isGentleScroll ? [...events, ...events] : renderItems;
-  
-  // Get original index for an item (for height measurement)
-  const getOriginalIndex = (item: ScheduleEvent, displayIndex: number): number => {
-    if (isGentleScroll) {
-      // For gentle scroll, map back to original index
-      return displayIndex % events.length;
-    }
-    if (hasOverflow && isPaginationMode && pageItems.length > 0) {
-      // For pagination, add the page start offset
-      return (pageItems[currentPage]?.start || 0) + displayIndex;
-    }
-    return displayIndex;
-  };
   
   // Use a stable key that changes when page content changes
   // For continuous scroll modes, use a stable key to prevent re-renders
@@ -1022,7 +956,6 @@ function SchedulePanel({
                   transitionStyle="static"
                   transitionSpeed={transitionSpeed}
                   showDate={showDate}
-                  index={getOriginalIndex(event, index)}
                 />
               ))}
             </motion.div>
@@ -1038,7 +971,6 @@ function SchedulePanel({
                 transitionStyle="static"
                 transitionSpeed={transitionSpeed}
                 showDate={showDate}
-                index={getOriginalIndex(event, index)}
               />
             ))}
           </div>
@@ -3579,7 +3511,7 @@ export default function EUSTDDSchedule() {
             events={todayEvents}
             onDeleteEvent={deleteEvent}
             onEditEvent={setEditingEvent}
-            onDoubleClick={() => handleAddEntry('event', format(today, 'yyyy-MM-dd'))}
+           onDoubleClick={() => handleAddEntry('event', format(today, 'yyyy-MM-dd'))}
           />
           
           <SchedulePanel 
