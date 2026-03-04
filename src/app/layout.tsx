@@ -19,9 +19,9 @@ export const metadata: Metadata = {
   keywords: ["EUSTDD", "Schedule", "Events", "Personnel", "Project Management"],
   authors: [{ name: "EUSTDD" }],
   icons: {
-    icon: "/dost.png",
-    shortcut: "/dost.png",
-    apple: "/dost.png",
+    icon: "/DOST1.png",
+    shortcut: "/DOST1.png",
+    apple: "/DOST1.png",
   },
   openGraph: {
     title: "EUSTDD Schedule",
