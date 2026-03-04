@@ -17,7 +17,12 @@ export const metadata: Metadata = {
   title: "EUSTDD Schedule",
   description: "EUSTDD Schedule Management System - Track events, personnel status, and projects",
   keywords: ["EUSTDD", "Schedule", "Events", "Personnel", "Project Management"],
-  authors: [{ name: "EUSTDD Interns" }],
+  authors: [{ name: "EUSTDD" }],
+  icons: {
+    icon: "/dost.png",
+    shortcut: "/dost.png",
+    apple: "/dost.png",
+  },
   openGraph: {
     title: "EUSTDD Schedule",
     description: "EUSTDD Schedule Management System",
