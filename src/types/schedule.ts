@@ -22,7 +22,7 @@ export interface ScheduleEvent {
 }
 
 // Personnel Status Type
-export type PersonnelType = 'CTO' | 'FL' | 'WFH' | 'TRAVEL';
+export type PersonnelType = 'CTO' | 'FL' | 'WFH' | 'TRAVEL' | 'OTHER';
 
 // Personnel Status (CTO, FL, WFH, In Travel)
 export interface PersonnelStatus {
@@ -40,6 +40,14 @@ export interface Project {
   id: string;
   name: string;
   number: number;
+  createdAt: string;
+}
+
+// Urgent Concern
+export interface UrgentConcern {
+  id: string;
+  title: string;
+  description?: string;
   createdAt: string;
 }
 
@@ -71,6 +79,7 @@ export interface ScheduleStoreState {
   events: ScheduleEvent[];
   personnelStatuses: PersonnelStatus[];
   projects: Project[];
+  urgentConcerns: UrgentConcern[];
   tickerMessages: TickerMessage[];
   settings: AppSettings;
   _hasHydrated: boolean;

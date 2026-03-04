@@ -3,17 +3,18 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
 model ScheduleData {
-  id             String   @id @default("main")
-  events         String   @default("[]")
-  personnel      String   @default("[]")
-  projects       String   @default("[]")
-  tickerMessages String   @default("[]")
-  settings       String   @default("{}")
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id              String   @id @default("main")
+  events          String   @default("[]")
+  personnel       String   @default("[]")
+  projects        String   @default("[]")
+  tickerMessages  String   @default("[]")
+  urgentConcerns  String   @default("[]")
+  settings        String   @default("{}")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }

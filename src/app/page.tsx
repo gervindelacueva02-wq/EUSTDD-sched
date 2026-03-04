@@ -166,58 +166,123 @@ function useOverflowTransition<T>(
   const [currentPage, setCurrentPage] = useState(0);
   const [hasOverflow, setHasOverflow] = useState(false);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [containerHeight, setContainerHeight] = useState(0);
+  const [contentHeight, setContentHeight] = useState(0);
   const scrollPositionRef = useRef(0);
   const animationRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const isAnimatingRef = useRef(false);
+  const contentResizeObserverRef = useRef<ResizeObserver | null>(null);
 
-  // Check for overflow and calculate items per page
-  useEffect(() => {
-    const checkOverflow = () => {
-      if (containerRef.current) {
-        const containerHeight = containerRef.current.clientHeight;
-        const calculatedItemsPerPage = Math.floor(containerHeight / itemHeight);
-        setItemsPerPage(Math.max(1, calculatedItemsPerPage));
-        
-        // Measure actual content height instead of estimating
-        const contentElement = containerRef.current.querySelector('[data-content-measure]');
-        if (contentElement) {
-          const actualContentHeight = contentElement.scrollHeight;
-          setHasOverflow(actualContentHeight > containerHeight);
-        } else {
-          // Fallback to estimation if content element not found
-          const availableHeight = containerHeight - 12;
-          const totalItemHeight = items.length * itemHeight;
-          setHasOverflow(totalItemHeight > availableHeight);
-        }
+  // Check for overflow based on actual measured heights
+  const checkOverflow = useCallback(() => {
+    if (!containerRef.current) return;
+    
+    const containerHeightValue = containerRef.current.clientHeight;
+    setContainerHeight(containerHeightValue);
+    const calculatedItemsPerPage = Math.floor(containerHeightValue / itemHeight);
+    setItemsPerPage(Math.max(1, calculatedItemsPerPage));
+    
+    // First try to measure original content (for gentle scroll mode with spacer/duplicates)
+    let actualContentHeight = 0;
+    const originalContentElement = containerRef.current.querySelector('[data-original-content]');
+    
+    if (originalContentElement) {
+      // For gentle continuous scroll - measure only original items
+      actualContentHeight = originalContentElement.scrollHeight;
+    } else {
+      // For other modes - measure the full content element
+      const contentElement = containerRef.current.querySelector('[data-content-measure]');
+      if (contentElement) {
+        actualContentHeight = contentElement.scrollHeight;
       }
-    };
+    }
+    
+    if (actualContentHeight > 0) {
+      setContentHeight(actualContentHeight);
+      
+      // ONLY trigger transition if content actually exceeds container height
+      // This handles cases where 2 items with long text overflow, 
+      // or 7 short items don't overflow
+      const contentExceedsContainer = actualContentHeight > containerHeightValue;
+      setHasOverflow(contentExceedsContainer);
+      
+      // If no overflow, reset scroll position
+      if (!contentExceedsContainer && containerRef.current) {
+        containerRef.current.scrollTop = 0;
+        scrollPositionRef.current = 0;
+      }
+    }
+  }, [containerRef, itemHeight]);
 
-    // Use requestAnimationFrame for initial check to ensure DOM is ready
+  // Setup observers for container and content size changes
+  useEffect(() => {
+    // Initial check after DOM is ready
     const rafId = requestAnimationFrame(() => {
       checkOverflow();
     });
     
-    // Use ResizeObserver for more reliable container size detection
-    let resizeObserver: ResizeObserver | null = null;
+    // Observe container size changes
+    let containerResizeObserver: ResizeObserver | null = null;
     if (typeof ResizeObserver !== 'undefined' && containerRef.current) {
-      resizeObserver = new ResizeObserver(() => {
-        // Small delay to ensure container dimensions are updated
+      containerResizeObserver = new ResizeObserver(() => {
         requestAnimationFrame(checkOverflow);
       });
-      resizeObserver.observe(containerRef.current);
+      containerResizeObserver.observe(containerRef.current);
     }
     
-    window.addEventListener('resize', checkOverflow);
-    return () => {
-      cancelAnimationFrame(rafId);
-      window.removeEventListener('resize', checkOverflow);
-      if (resizeObserver) {
-        resizeObserver.disconnect();
+    // Observe content size changes (handles text wrapping, dynamic content)
+    const setupContentObserver = () => {
+      if (contentResizeObserverRef.current) {
+        contentResizeObserverRef.current.disconnect();
+      }
+      
+      // Try to observe original content first (for gentle scroll mode)
+      const originalContentElement = containerRef.current?.querySelector('[data-original-content]');
+      const contentElement = containerRef.current?.querySelector('[data-content-measure]');
+      
+      if (typeof ResizeObserver !== 'undefined') {
+        contentResizeObserverRef.current = new ResizeObserver(() => {
+          requestAnimationFrame(checkOverflow);
+        });
+        
+        // Observe whichever element exists
+        if (originalContentElement) {
+          contentResizeObserverRef.current.observe(originalContentElement);
+        }
+        if (contentElement && contentElement !== originalContentElement) {
+          contentResizeObserverRef.current.observe(contentElement);
+        }
       }
     };
-  }, [items.length, itemHeight, containerRef]);
+    
+    // Setup content observer after a short delay to ensure content is rendered
+    const contentObserverTimeout = setTimeout(setupContentObserver, 100);
+    
+    window.addEventListener('resize', checkOverflow);
+    
+    return () => {
+      cancelAnimationFrame(rafId);
+      clearTimeout(contentObserverTimeout);
+      window.removeEventListener('resize', checkOverflow);
+      if (containerResizeObserver) {
+        containerResizeObserver.disconnect();
+      }
+      if (contentResizeObserverRef.current) {
+        contentResizeObserverRef.current.disconnect();
+      }
+    };
+  }, [items.length, checkOverflow]);
+
+  // Re-check overflow when items change (debounced)
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      requestAnimationFrame(checkOverflow);
+    }, 50);
+    
+    return () => clearTimeout(timeoutId);
+  }, [items, checkOverflow]);
 
   // Calculate total pages
   const totalPages = Math.max(1, Math.ceil(items.length / itemsPerPage));
@@ -255,7 +320,16 @@ function useOverflowTransition<T>(
 
   // Pagination for fade/slideUp/slideLeft
   useEffect(() => {
-    if (!hasOverflow) return;
+    // Only animate if content actually overflows the container
+    if (!hasOverflow) {
+      cleanupAnimations();
+      if (containerRef.current) {
+        containerRef.current.scrollTop = 0;
+        scrollPositionRef.current = 0;
+      }
+      queueMicrotask(() => setCurrentPage(0));
+      return;
+    }
     if (settings.transitionStyle !== 'fade' && settings.transitionStyle !== 'slideUp' && settings.transitionStyle !== 'slideLeft') return;
     if (totalPages <= 1) return;
 
@@ -266,6 +340,17 @@ function useOverflowTransition<T>(
     
     intervalRef.current = setInterval(() => {
       if (!isAnimatingRef.current) return;
+      // Check if overflow still exists before paginating
+      if (containerRef.current) {
+        // Try original content first, then fall back to content measure
+        const originalContent = containerRef.current.querySelector('[data-original-content]');
+        const contentElement = originalContent || containerRef.current.querySelector('[data-content-measure]');
+        if (contentElement && contentElement.scrollHeight <= containerRef.current.clientHeight) {
+          // Content no longer overflows, stop pagination
+          queueMicrotask(() => setCurrentPage(0));
+          return;
+        }
+      }
       setCurrentPage((prev) => (prev + 1) % totalPages);
     }, duration);
 
@@ -274,7 +359,16 @@ function useOverflowTransition<T>(
 
   // Continuous scroll for verticalAutoScroll and gentleContinuousScroll
   useEffect(() => {
-    if (!hasOverflow) return;
+    // Only start animation if content actually overflows
+    if (!hasOverflow) {
+      // Stop any running animation and reset scroll
+      cleanupAnimations();
+      if (containerRef.current) {
+        containerRef.current.scrollTop = 0;
+        scrollPositionRef.current = 0;
+      }
+      return;
+    }
     if (settings.transitionStyle !== 'verticalAutoScroll' && settings.transitionStyle !== 'gentleContinuousScroll') return;
     if (!containerRef.current) return;
 
@@ -284,15 +378,28 @@ function useOverflowTransition<T>(
     const scrollSpeed = getScrollSpeed(settings.transitionSpeed);
     
     if (settings.transitionStyle === 'gentleContinuousScroll') {
-      // Smooth continuous scroll with seamless loop
+      // Smooth continuous scroll with seamless loop using spacer
       isAnimatingRef.current = true;
       lastTimeRef.current = 0;
       
-      // Get the height of one set of items (half of the duplicated content)
-      const singleSetHeight = container.scrollHeight / 2;
+      // Use measured content height from state (updated dynamically)
+      // The reset point is content height + container height (spacer allows last item to fully exit)
+      // Content structure: [items] + [spacer of containerHeight] + [items]
+      // We reset when scroll reaches contentHeight + containerHeight (spacer has fully scrolled)
+      const resetPoint = contentHeight + containerHeight;
       
       const animate = (timestamp: number) => {
         if (!isAnimatingRef.current) return;
+        
+        // Check if we still have overflow using original content (not spacer/duplicates)
+        const originalContent = container.querySelector('[data-original-content]');
+        const currentContentHeight = originalContent?.scrollHeight || 0;
+        if (currentContentHeight > 0 && currentContentHeight <= container.clientHeight) {
+          // Content no longer overflows, stop animation
+          container.scrollTop = 0;
+          scrollPositionRef.current = 0;
+          return;
+        }
         
         if (!lastTimeRef.current) {
           lastTimeRef.current = timestamp;
@@ -302,10 +409,10 @@ function useOverflowTransition<T>(
 
         scrollPositionRef.current += (scrollSpeed * delta) / 1000;
         
-        // When reaching the end of the first set, seamlessly reset to beginning
-        // This creates an infinite loop effect
-        if (scrollPositionRef.current >= singleSetHeight) {
-          scrollPositionRef.current = scrollPositionRef.current - singleSetHeight;
+        // When reaching the reset point, seamlessly reset to beginning
+        // This allows the last item to fully exit before the first item appears
+        if (scrollPositionRef.current >= resetPoint) {
+          scrollPositionRef.current = 0;
         }
         
         container.scrollTop = scrollPositionRef.current;
@@ -325,6 +432,17 @@ function useOverflowTransition<T>(
         if (!isAnimatingRef.current || !containerRef.current) return;
         
         const currentContainer = containerRef.current;
+        
+        // Check if overflow still exists using original content
+        const originalContent = currentContainer.querySelector('[data-original-content]');
+        const contentElement = originalContent || currentContainer.querySelector('[data-content-measure]');
+        if (contentElement && contentElement.scrollHeight <= currentContainer.clientHeight) {
+          // Content no longer overflows, stop animation
+          currentContainer.scrollTop = 0;
+          scrollPositionRef.current = 0;
+          return;
+        }
+        
         const maxScroll = currentContainer.scrollHeight - currentContainer.clientHeight;
         scrollPositionRef.current += stepSize;
         
@@ -350,7 +468,7 @@ function useOverflowTransition<T>(
 
       return () => cleanupAnimations();
     }
-  }, [hasOverflow, settings.transitionStyle, settings.transitionSpeed, settings.smoothScrollEnabled, itemHeight, cleanupAnimations]);
+  }, [hasOverflow, contentHeight, containerHeight, settings.transitionStyle, settings.transitionSpeed, settings.smoothScrollEnabled, itemHeight, cleanupAnimations]);
 
   // Reset scroll position when items change
   useEffect(() => {
@@ -368,7 +486,9 @@ function useOverflowTransition<T>(
     hasOverflow,
     currentPage,
     totalPages,
-    itemsPerPage
+    itemsPerPage,
+    containerHeight,
+    contentHeight
   };
 }
 
@@ -860,7 +980,7 @@ function SchedulePanel({
   const containerRef = useRef<HTMLDivElement>(null);
   
   // Use overflow transition hook (item height: 20px font * 2 lines + padding = ~50px per item)
-  const { currentItems, hasOverflow, currentPage, totalPages } = useOverflowTransition(
+  const { currentItems, hasOverflow, currentPage, totalPages, containerHeight } = useOverflowTransition(
     events,
     containerRef,
     50,
@@ -901,9 +1021,8 @@ function SchedulePanel({
   // Content to render
   const renderItems = hasOverflow && isPaginationMode ? currentItems : events;
   
-  // For gentle continuous scroll, duplicate items for seamless loop
+  // For gentle continuous scroll, we don't duplicate items - we use CSS spacer instead
   const isGentleScroll = settings.transitionStyle === 'gentleContinuousScroll';
-  const displayItems = hasOverflow && isGentleScroll ? [...events, ...events] : renderItems;
   
   // Use a stable key that changes when page content changes
   // For continuous scroll modes, use a stable key to prevent re-renders
@@ -947,7 +1066,7 @@ function SchedulePanel({
               className="space-y-0.5"
               data-content-measure
             >
-              {displayItems.map((event, index) => (
+              {renderItems.map((event, index) => (
                 <EventRow 
                   key={`${event.id}-${index}`} 
                   event={event} 
@@ -962,9 +1081,28 @@ function SchedulePanel({
           </AnimatePresence>
         ) : (
           <div className="space-y-0.5" data-content-measure>
-            {displayItems.map((event, index) => (
+            {/* Original items - this is what we measure for overflow detection */}
+            <div data-original-content>
+              {events.map((event, index) => (
+                <EventRow 
+                  key={`${event.id}-${index}`} 
+                  event={event} 
+                  onDelete={onDeleteEvent ? () => onDeleteEvent(event.id) : undefined}
+                  onEdit={onEditEvent ? () => onEditEvent(event) : undefined}
+                  transitionStyle="static"
+                  transitionSpeed={transitionSpeed}
+                  showDate={showDate}
+                />
+              ))}
+            </div>
+            {/* Spacer - allows last item to fully exit before first item appears */}
+            {isGentleScroll && hasOverflow && (
+              <div style={{ height: containerHeight }} aria-hidden="true" />
+            )}
+            {/* Duplicate items for seamless loop */}
+            {isGentleScroll && hasOverflow && events.map((event, index) => (
               <EventRow 
-                key={`${event.id}-${index}`} 
+                key={`${event.id}-dup-${index}`} 
                 event={event} 
                 onDelete={onDeleteEvent ? () => onDeleteEvent(event.id) : undefined}
                 onEdit={onEditEvent ? () => onEditEvent(event) : undefined}
@@ -986,13 +1124,15 @@ function PersonnelStatusPanel({
   onEditPersonnel,
   onAddCto,
   onAddWfh,
-  onAddTravel
+  onAddTravel,
+  onAddOther
 }: { 
   onDeletePersonnel: (id: string) => void;
   onEditPersonnel: (personnel: PersonnelStatus) => void;
   onAddCto: () => void;
   onAddWfh: () => void;
   onAddTravel: () => void;
+  onAddOther: () => void;
 }) {
   const { personnelStatuses, settings } = useScheduleStore();
   const today = new Date();
@@ -1008,28 +1148,25 @@ function PersonnelStatusPanel({
   const travelPersonnel = personnelStatuses.filter(
     (p) => p.type === 'TRAVEL' && isDateInRange(p.dateStart, p.dateEnd, today)
   );
+  
+  const otherPersonnel = personnelStatuses.filter(
+    (p) => p.type === 'OTHER' && isDateInRange(p.dateStart, p.dateEnd, today)
+  );
+  
+  // Combined CTO/LEAVE & WFH personnel
+  const ctoLeaveWfhPersonnel = [...ctoflPersonnel, ...wfhPersonnel];
 
   return (
     <div className="bg-card border border-border rounded-lg h-full flex flex-col overflow-hidden">
       <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border overflow-hidden">
-        {/* CTO/LEAVE Column */}
+        {/* Combined CTO/LEAVE & WFH Column */}
         <PersonnelColumn 
-          title="CTO/LEAVE" 
-          personnel={ctoflPersonnel} 
+          title="CTO/LEAVE & WFH" 
+          personnel={ctoLeaveWfhPersonnel} 
           settings={settings}
           onDeletePersonnel={onDeletePersonnel}
           onEditPersonnel={onEditPersonnel}
           onDoubleClick={onAddCto}
-        />
-        
-        {/* WFH Column */}
-        <PersonnelColumn 
-          title="WFH" 
-          personnel={wfhPersonnel} 
-          settings={settings}
-          onDeletePersonnel={onDeletePersonnel}
-          onEditPersonnel={onEditPersonnel}
-          onDoubleClick={onAddWfh}
         />
         
         {/* IN TRAVEL Column */}
@@ -1040,6 +1177,16 @@ function PersonnelStatusPanel({
           onDeletePersonnel={onDeletePersonnel}
           onEditPersonnel={onEditPersonnel}
           onDoubleClick={onAddTravel}
+        />
+        
+        {/* Other Division Requests Column */}
+        <PersonnelColumn 
+          title="OTHER DIVISION REQUESTS" 
+          personnel={otherPersonnel} 
+          settings={settings}
+          onDeletePersonnel={onDeletePersonnel}
+          onEditPersonnel={onEditPersonnel}
+          onDoubleClick={onAddOther}
         />
       </div>
     </div>
@@ -1066,7 +1213,7 @@ function PersonnelColumn({
   const transitionSpeed = getTransitionSpeed(settings.transitionSpeed, settings.customTransitionSeconds);
   
   // Personnel item height: 18px name + 12px date + padding = ~48px
-  const { currentItems, hasOverflow, currentPage, totalPages } = useOverflowTransition(
+  const { currentItems, hasOverflow, currentPage, totalPages, containerHeight } = useOverflowTransition(
     personnel,
     containerRef,
     48,
@@ -1104,9 +1251,8 @@ function PersonnelColumn({
 
   const renderItems = hasOverflow && isPaginationMode ? currentItems : personnel;
 
-  // For gentle continuous scroll, duplicate items for seamless loop
+  // For gentle continuous scroll, we don't duplicate items - we use CSS spacer instead
   const isGentleScroll = settings.transitionStyle === 'gentleContinuousScroll';
-  const displayItems = hasOverflow && isGentleScroll ? [...personnel, ...personnel] : renderItems;
 
   // Use a stable key that changes when page content changes
   // For continuous scroll modes, use a stable key to prevent re-renders
@@ -1149,15 +1295,26 @@ function PersonnelColumn({
               className="space-y-0.5"
               data-content-measure
             >
-              {displayItems.map((p, index) => (
+              {renderItems.map((p, index) => (
                 <PersonnelItemCompact key={`${p.id}-${index}`} item={p} onDelete={() => onDeletePersonnel(p.id)} onEdit={() => onEditPersonnel(p)} />
               ))}
             </motion.div>
           </AnimatePresence>
         ) : (
           <div className="space-y-0.5" data-content-measure>
-            {displayItems.map((p, index) => (
-              <PersonnelItemCompact key={`${p.id}-${index}`} item={p} onDelete={() => onDeletePersonnel(p.id)} onEdit={() => onEditPersonnel(p)} />
+            {/* Original items - this is what we measure for overflow detection */}
+            <div data-original-content>
+              {personnel.map((p, index) => (
+                <PersonnelItemCompact key={`${p.id}-${index}`} item={p} onDelete={() => onDeletePersonnel(p.id)} onEdit={() => onEditPersonnel(p)} />
+              ))}
+            </div>
+            {/* Spacer - allows last item to fully exit before first item appears */}
+            {isGentleScroll && hasOverflow && (
+              <div style={{ height: containerHeight }} aria-hidden="true" />
+            )}
+            {/* Duplicate items for seamless loop */}
+            {isGentleScroll && hasOverflow && personnel.map((p, index) => (
+              <PersonnelItemCompact key={`${p.id}-dup-${index}`} item={p} onDelete={() => onDeletePersonnel(p.id)} onEdit={() => onEditPersonnel(p)} />
             ))}
           </div>
         )}
@@ -3529,6 +3686,7 @@ export default function EUSTDDSchedule() {
             onAddCto={() => setModalType('cto')}
             onAddWfh={() => setModalType('wfh')}
             onAddTravel={() => setModalType('travel')}
+            onAddOther={() => setModalType('other')}
           />
           
           <ProjectRequestPanel 
