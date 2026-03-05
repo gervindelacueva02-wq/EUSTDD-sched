@@ -1443,13 +1443,15 @@ function PersonnelItemCompact({
       className="flex items-start justify-between gap-2 py-1 px-2 hover:bg-muted/50 rounded group transition-colors"
     >
       <div className="flex-1 min-w-0 flex items-start gap-2">
-        <div className="flex flex-col min-w-0">
-          <span className="font-medium text-sm sm:text-base lg:text-[18px] text-foreground truncate">{item.name}</span>
-          <span className="text-[10px] sm:text-xs lg:text-[12px] text-muted-foreground">
-            {formatDateRange(item.dateStart, item.dateEnd)}
-          </span>
+        <div className="flex flex-col min-w-0 flex-1">
+          <span className="font-medium text-sm sm:text-base lg:text-[18px] text-foreground line-clamp-2 break-words">{item.name}</span>
+          {item.type !== 'OTHER' && (
+            <span className="text-[10px] sm:text-xs lg:text-[12px] text-muted-foreground">
+              {formatDateRange(item.dateStart, item.dateEnd)}
+            </span>
+          )}
           {item.location && (
-            <span className="text-[10px] sm:text-xs text-muted-foreground truncate">{item.location}</span>
+            <span className="text-[10px] sm:text-xs text-muted-foreground line-clamp-1">{item.location}</span>
           )}
         </div>
         {typeBadge && (
@@ -1517,85 +1519,46 @@ function PersonnelItemCompact({
 // Project Item Component
 function ProjectItem({ 
   project, 
-  onIncrement, 
-  onDecrement,
   onDelete,
   onEdit 
 }: { 
   project: Project;
-  onIncrement: () => void;
-  onDecrement: () => void;
   onDelete?: () => void;
   onEdit?: () => void;
 }) {
-  const [isHovered, setIsHovered] = useState(false);
-  const [isFocused, setIsFocused] = useState(false);
-  const showControls = isHovered || isFocused;
-
   const content = (
     <motion.div 
       layout
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className="flex items-center justify-between py-2 px-2 sm:px-3 hover:bg-muted/50 rounded group transition-colors"
+      className="flex items-center justify-between py-2 px-2 sm:px-3 hover:bg-muted/50 rounded group transition-colors gap-2"
     >
-      <span className="font-medium text-sm sm:text-base lg:text-[20px] text-foreground truncate flex-1">{project.name}</span>
-      <div 
-        className="flex items-center gap-0.5 sm:gap-1 relative"
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
-      >
-        {/* Decrement button - hidden by default */}
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className={`h-7 w-7 transition-opacity duration-200 ${showControls ? 'opacity-100' : 'opacity-0'}`}
-          onClick={onDecrement}
-          disabled={project.number === 0}
-          tabIndex={showControls ? 0 : -1}
-        >
-          <Minus className="h-4 w-4" />
-        </Button>
-        
-        {/* Number display - always visible */}
-        <span className="w-10 text-center text-lg font-bold text-foreground tabular-nums select-none">
+      <span className="font-medium text-sm sm:text-base lg:text-[18px] text-foreground flex-1 line-clamp-2 break-words">{project.name}</span>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        {/* Number display */}
+        <span className="min-w-[32px] text-center text-base font-bold text-foreground tabular-nums">
           {project.number}
         </span>
-        
-        {/* Increment button - hidden by default */}
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className={`h-7 w-7 transition-opacity duration-200 ${showControls ? 'opacity-100' : 'opacity-0'}`}
-          onClick={onIncrement}
-          tabIndex={showControls ? 0 : -1}
-        >
-          <Plus className="h-4 w-4" />
-        </Button>
-        
-        {/* Edit/Delete buttons - stacked vertically */}
-        <div className="flex flex-col gap-0.5 ml-1">
+        <div className="flex flex-col gap-0.5">
           {onEdit && (
             <Button 
               variant="ghost" 
               size="icon" 
-              className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
               onClick={onEdit}
             >
-              <Pencil className="h-4 w-4 text-muted-foreground" />
+              <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
             </Button>
           )}
           {onDelete && (
             <Button 
               variant="ghost" 
               size="icon" 
-              className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
               onClick={onDelete}
             >
-              <Trash2 className="h-4 w-4 text-destructive" />
+              <Trash2 className="h-3.5 w-3.5 text-destructive" />
             </Button>
           )}
         </div>
@@ -1611,26 +1574,15 @@ function ProjectItem({
           {content}
         </ContextMenuTrigger>
         <ContextMenuContent>
-          <ContextMenuItem onClick={onIncrement}>
-            <Plus className="h-4 w-4 mr-2" />
-            Increment
-          </ContextMenuItem>
-          <ContextMenuItem onClick={onDecrement}>
-            <Minus className="h-4 w-4 mr-2" />
-            Decrement
-          </ContextMenuItem>
           {onEdit && (
-            <>
-              <ContextMenuSeparator />
-              <ContextMenuItem onClick={onEdit}>
-                <Pencil className="h-4 w-4 mr-2" />
-                Edit Project
-              </ContextMenuItem>
-            </>
+            <ContextMenuItem onClick={onEdit}>
+              <Pencil className="h-4 w-4 mr-2" />
+              Edit Project
+            </ContextMenuItem>
           )}
           {onDelete && (
             <>
-              <ContextMenuSeparator />
+              {onEdit && <ContextMenuSeparator />}
               <ContextMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
                 <Trash2 className="h-4 w-4 mr-2" />
                 Delete Project
@@ -1664,9 +1616,9 @@ function UrgentConcernItem({
       className="flex items-center justify-between py-2 px-2 sm:px-3 hover:bg-muted/50 rounded group transition-colors"
     >
       <div className="flex-1 min-w-0">
-        <span className="font-medium text-sm sm:text-base lg:text-[18px] text-foreground truncate block">{concern.title}</span>
+        <span className="font-medium text-sm sm:text-base lg:text-[18px] text-foreground line-clamp-2 break-words block">{concern.title}</span>
         {concern.description && (
-          <span className="text-xs sm:text-sm text-muted-foreground truncate block">{concern.description}</span>
+          <span className="text-xs sm:text-sm text-muted-foreground line-clamp-2 break-words block">{concern.description}</span>
         )}
       </div>
       <div className="flex flex-col gap-0.5 flex-shrink-0 ml-2">
@@ -1866,7 +1818,6 @@ function ProjectColumn({
   onEditProject: (project: Project) => void;
   onDoubleClick: () => void;
 }) {
-  const { incrementProject, decrementProject } = useScheduleStore();
   const containerRef = useRef<HTMLDivElement>(null);
   const transitionSpeed = getTransitionSpeed(settings.transitionSpeed, settings.customTransitionSeconds);
   
@@ -1956,8 +1907,6 @@ function ProjectColumn({
                 <ProjectItem 
                   key={`${project.id}-${index}`} 
                   project={project} 
-                  onIncrement={() => incrementProject(project.id)}
-                  onDecrement={() => decrementProject(project.id)}
                   onDelete={() => onDeleteProject(project.id)} 
                   onEdit={() => onEditProject(project)} 
                 />
@@ -1972,8 +1921,6 @@ function ProjectColumn({
                 <ProjectItem 
                   key={`${project.id}-${index}`} 
                   project={project} 
-                  onIncrement={() => incrementProject(project.id)}
-                  onDecrement={() => decrementProject(project.id)}
                   onDelete={() => onDeleteProject(project.id)} 
                   onEdit={() => onEditProject(project)} 
                 />
@@ -1988,8 +1935,6 @@ function ProjectColumn({
               <ProjectItem 
                 key={`${project.id}-dup-${index}`} 
                 project={project} 
-                onIncrement={() => incrementProject(project.id)}
-                onDecrement={() => decrementProject(project.id)}
                 onDelete={() => onDeleteProject(project.id)} 
                 onEdit={() => onEditProject(project)} 
               />
@@ -4508,8 +4453,8 @@ function TickerItem({
   showSeparator: boolean;
 }) {
   return (
-    <span className="inline-flex items-center gap-2">
-      <span className="text-foreground">{ticker.message}</span>
+    <span className="inline-flex items-center gap-2 px-1">
+      <span className="text-2xl font-bold text-foreground">{ticker.message}</span>
       {showSeparator && <span className="text-muted-foreground ml-2">•</span>}
     </span>
   );
