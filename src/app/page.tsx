@@ -16,7 +16,7 @@ import {
   Pencil
 } from 'lucide-react';
 import { useScheduleStore } from '@/store/schedule-store';
-import type { ScheduleEvent, PersonnelStatus, Project, TickerMessage, EventStatus, TransitionStyle } from '@/types/schedule';
+import type { ScheduleEvent, PersonnelStatus, Project, TickerMessage, EventStatus, TransitionStyle, UrgentConcern, EventCategory } from '@/types/schedule';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -50,6 +50,7 @@ import {
   ContextMenuSeparator,
 } from '@/components/ui/context-menu';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
 
 // Utility function to format time to 12-hour format
 const formatTime12Hour = (time: string): string => {
@@ -77,6 +78,30 @@ const getEventStatus = (event: ScheduleEvent): EventStatus => {
   } else {
     return 'completed';
   }
+};
+
+// Event category configuration
+const EVENT_CATEGORIES: { value: EventCategory; label: string; color: string }[] = [
+  { value: 'water', label: 'Water', color: '#3b82f6' }, // blue
+  { value: 'construction', label: 'Construction', color: '#6b7280' }, // gray
+  { value: 'energy', label: 'Energy', color: '#eab308' }, // yellow
+  { value: 'disaster-mitigation', label: 'Disaster\nMitigation', color: '#a855f7' }, // purple
+  { value: 'human-security', label: 'Human\nSecurity', color: '#ef4444' }, // red
+  { value: 'transport', label: 'Transport', color: '#f97316' }, // orange
+];
+
+// Get sector color
+const getSectorColor = (category?: EventCategory): string => {
+  if (!category) return '#6b7280'; // default gray
+  const cat = EVENT_CATEGORIES.find(c => c.value === category);
+  return cat ? cat.color : '#6b7280';
+};
+
+// Get sector label
+const getSectorLabel = (category?: EventCategory): string => {
+  if (!category) return '';
+  const cat = EVENT_CATEGORIES.find(c => c.value === category);
+  return cat ? cat.label : '';
 };
 
 // Check if a date is within a range
@@ -656,20 +681,20 @@ function Header({
 
   return (
     <>
-      <header className="w-full bg-card border-b border-border px-2 sm:px-4 py-2 relative">
+      <header className="w-full bg-card border-b border-border px-2 sm:px-3 py-1.5 relative">
         {/* Mobile Layout */}
-        <div className="flex flex-col gap-2 sm:hidden">
+        <div className="flex flex-col gap-1 sm:hidden">
           {/* Title Row */}
           <div className="flex items-center justify-between">
-            <h1 className="text-lg font-bold tracking-wide text-foreground">
+            <h1 className="text-base font-bold tracking-wide text-foreground">
               EUSTDD SCHEDULE
             </h1>
             <div className="flex items-center gap-1">
               {/* View Mode Dropdown - Mobile */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon" className="h-9 w-9">
-                    <CalendarIcon className="h-4 w-4" />
+                  <Button variant="outline" size="icon" className="h-7 w-7">
+                    <CalendarIcon className="h-3.5 w-3.5" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-28">
@@ -682,35 +707,36 @@ function Header({
               {/* Add Entry Button - Mobile */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-9 w-9">
-                    <Plus className="h-5 w-5" />
+                  <Button variant="ghost" size="icon" className="h-7 w-7">
+                    <Plus className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-40">
+                <DropdownMenuContent align="end" className="w-44">
                   <DropdownMenuItem onClick={() => handleProtectedAction(() => onAddEntry('event'), 'add', 'event')}>Add Event</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleProtectedAction(() => onAddEntry('cto'), 'add', 'cto')}>Add CTO / LEAVE</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleProtectedAction(() => onAddEntry('wfh'), 'add', 'wfh')}>Add WFH</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleProtectedAction(() => onAddEntry('ctoWfh'), 'add', 'ctoWfh')}>Add CTO/Leave & WFH</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleProtectedAction(() => onAddEntry('travel'), 'add', 'travel')}>Add In Travel</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleProtectedAction(() => onAddEntry('otherDivision'), 'add', 'otherDivision')}>Add Other Division Request</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleProtectedAction(() => onAddEntry('urgentConcern'), 'add', 'urgentConcern')}>Add Urgent Concern</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleProtectedAction(() => onAddEntry('project'), 'add', 'project')}>Add Project</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleProtectedAction(() => onAddEntry('ticker'), 'add', 'ticker')}>Add Renewing Project</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
               
               {/* Settings Button - Mobile */}
-              <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => handleProtectedAction(onOpenSettings, 'settings')}>
-                <Settings className="h-5 w-5" />
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleProtectedAction(onOpenSettings, 'settings')}>
+                <Settings className="h-4 w-4" />
               </Button>
             </div>
           </div>
           
           {/* Date & Time Row - Mobile */}
-          <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+          <div className="flex items-center justify-center gap-2 text-[11px] text-muted-foreground">
             <span className="flex items-center gap-1">
-              <CalendarIcon className="h-3.5 w-3.5" />
+              <CalendarIcon className="h-3 w-3" />
               {format(currentTime, 'MMM d, yyyy')}
             </span>
             <span className="flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5" />
+              <Clock className="h-3 w-3" />
               <span className="font-mono tabular-nums">{format(currentTime, 'hh:mm:ss aa')}</span>
             </span>
           </div>
@@ -720,20 +746,20 @@ function Header({
         <div className="hidden sm:flex items-center justify-between">
           {/* Title - Left Side */}
           <div className="flex-1 min-w-0">
-            <h1 className="text-xl lg:text-[30px] font-bold tracking-wide text-foreground">
+            <h1 className="text-lg lg:text-xl font-bold tracking-wide text-foreground">
               EUSTDD SCHEDULE
             </h1>
           </div>
           
           {/* Date & Time - Center */}
           <div className="flex-1 flex justify-center">
-            <div className="flex flex-wrap items-center justify-center gap-2 lg:gap-3 text-sm lg:text-[18px] text-muted-foreground">
+            <div className="flex flex-wrap items-center justify-center gap-2 lg:gap-3 text-xs lg:text-sm text-muted-foreground">
               <span className="flex items-center gap-1.5">
-                <CalendarIcon className="h-4 w-4 lg:h-5 lg:w-5" />
+                <CalendarIcon className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
                 {format(currentTime, 'MMMM d, yyyy')}
               </span>
               <span className="flex items-center gap-1.5">
-                <Clock className="h-4 w-4 lg:h-5 lg:w-5" />
+                <Clock className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
                 <span className="font-mono tabular-nums">{format(currentTime, 'hh:mm:ss aa')}</span>
               </span>
             </div>
@@ -744,38 +770,39 @@ function Header({
             {/* View Mode Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="h-9 px-2 lg:px-3 gap-1.5">
-                  <CalendarIcon className="h-4 w-4" />
-                  <span className="text-sm hidden lg:inline">{getViewModeLabel()}</span>
+                <Button variant="outline" className="h-7 px-2 lg:px-3 gap-1.5">
+                  <CalendarIcon className="h-3.5 w-3.5" />
+                  <span className="text-xs hidden lg:inline">{getViewModeLabel()}</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-28">
-                <DropdownMenuItem className="text-sm py-2" onClick={() => onViewModeChange('day')}>Day</DropdownMenuItem>
-                <DropdownMenuItem className="text-sm py-2" onClick={() => onViewModeChange('week')}>Week</DropdownMenuItem>
-                <DropdownMenuItem className="text-sm py-2" onClick={() => onViewModeChange('month')}>Month</DropdownMenuItem>
+                <DropdownMenuItem className="text-xs py-1.5" onClick={() => onViewModeChange('day')}>Day</DropdownMenuItem>
+                <DropdownMenuItem className="text-xs py-1.5" onClick={() => onViewModeChange('week')}>Week</DropdownMenuItem>
+                <DropdownMenuItem className="text-xs py-1.5" onClick={() => onViewModeChange('month')}>Month</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             
             {/* Add Entry Button */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-10 w-10 lg:h-12 lg:w-12">
-                  <Plus className="h-5 w-5 lg:h-6 lg:w-6" />
+                <Button variant="ghost" size="icon" className="h-8 w-8 lg:h-9 lg:w-9">
+                  <Plus className="h-4 w-4 lg:h-5 lg:w-5" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-44">
-                <DropdownMenuItem className="text-sm py-2" onClick={() => handleProtectedAction(() => onAddEntry('event'), 'add', 'event')}>Add Event</DropdownMenuItem>
-                <DropdownMenuItem className="text-sm py-2" onClick={() => handleProtectedAction(() => onAddEntry('cto'), 'add', 'cto')}>Add CTO / LEAVE</DropdownMenuItem>
-                <DropdownMenuItem className="text-sm py-2" onClick={() => handleProtectedAction(() => onAddEntry('wfh'), 'add', 'wfh')}>Add WFH</DropdownMenuItem>
-                <DropdownMenuItem className="text-sm py-2" onClick={() => handleProtectedAction(() => onAddEntry('travel'), 'add', 'travel')}>Add In Travel</DropdownMenuItem>
-                <DropdownMenuItem className="text-sm py-2" onClick={() => handleProtectedAction(() => onAddEntry('project'), 'add', 'project')}>Add Project</DropdownMenuItem>
-                <DropdownMenuItem className="text-sm py-2" onClick={() => handleProtectedAction(() => onAddEntry('ticker'), 'add', 'ticker')}>Add Renewing Project</DropdownMenuItem>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem className="text-xs py-1.5" onClick={() => handleProtectedAction(() => onAddEntry('event'), 'add', 'event')}>Add Event</DropdownMenuItem>
+                <DropdownMenuItem className="text-xs py-1.5" onClick={() => handleProtectedAction(() => onAddEntry('ctoWfh'), 'add', 'ctoWfh')}>Add CTO/Leave & WFH</DropdownMenuItem>
+                <DropdownMenuItem className="text-xs py-1.5" onClick={() => handleProtectedAction(() => onAddEntry('travel'), 'add', 'travel')}>Add In Travel</DropdownMenuItem>
+                <DropdownMenuItem className="text-xs py-1.5" onClick={() => handleProtectedAction(() => onAddEntry('otherDivision'), 'add', 'otherDivision')}>Add Other Division Request</DropdownMenuItem>
+                <DropdownMenuItem className="text-xs py-1.5" onClick={() => handleProtectedAction(() => onAddEntry('urgentConcern'), 'add', 'urgentConcern')}>Add Urgent Concern</DropdownMenuItem>
+                <DropdownMenuItem className="text-xs py-1.5" onClick={() => handleProtectedAction(() => onAddEntry('project'), 'add', 'project')}>Add Project</DropdownMenuItem>
+                <DropdownMenuItem className="text-xs py-1.5" onClick={() => handleProtectedAction(() => onAddEntry('ticker'), 'add', 'ticker')}>Add Renewing Project</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             
             {/* Settings Button */}
-            <Button variant="ghost" size="icon" onClick={() => handleProtectedAction(onOpenSettings, 'settings')} className="h-10 w-10 lg:h-12 lg:w-12">
-              <Settings className="h-5 w-5 lg:h-6 lg:w-6" />
+            <Button variant="ghost" size="icon" onClick={() => handleProtectedAction(onOpenSettings, 'settings')} className="h-8 w-8 lg:h-9 lg:w-9">
+              <Settings className="h-4 w-4 lg:h-5 lg:w-5" />
             </Button>
           </div>
         </div>
@@ -822,6 +849,8 @@ function EventRow({ event, onDelete, onEdit, transitionStyle, transitionSpeed, s
   const { settings } = useScheduleStore();
   const status = getEventStatus(event);
   const statusColor = settings.statusColors[status];
+  const sectorColor = getSectorColor(event.category);
+  const sectorLabel = getSectorLabel(event.category);
   const isAllDay = event.timeStart === '00:00' && event.timeEnd === '23:59';
   
   const variants = getTransitionVariants(transitionStyle, transitionSpeed);
@@ -833,15 +862,24 @@ function EventRow({ event, onDelete, onEdit, transitionStyle, transitionSpeed, s
       animate="animate"
       exit="exit"
       layout
-      className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4 py-2 px-2 sm:px-3 hover:bg-muted/50 rounded group transition-colors"
+      className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 py-2 px-2 sm:px-3 hover:bg-muted/50 rounded group transition-colors overflow-hidden"
     >
-      {/* Mobile Layout: Single column with status dot, title, and time */}
+      {/* Mobile Layout */}
       <div className="flex items-start gap-2 flex-1 min-w-0 sm:hidden">
-        <StatusDot color={statusColor} size="sm" className="mt-1.5" />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2">
-            <span className="font-medium text-sm text-foreground break-words flex-1">{event.title}</span>
-            <div className="flex items-center gap-0.5 flex-shrink-0">
+        <div className="flex-1 min-w-0 w-full overflow-hidden">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0 overflow-hidden">
+              {event.category && (
+                <span 
+                  className="text-[10px] px-2 py-0.5 rounded-full text-white font-medium flex-shrink-0"
+                  style={{ backgroundColor: sectorColor }}
+                >
+                  {sectorLabel}
+                </span>
+              )}
+              <span className="font-medium text-sm text-foreground truncate">{event.title}</span>
+            </div>
+            <div className="flex flex-col gap-0.5 flex-shrink-0">
               {onEdit && (
                 <Button 
                   variant="ghost" 
@@ -864,48 +902,83 @@ function EventRow({ event, onDelete, onEdit, transitionStyle, transitionSpeed, s
               )}
             </div>
           </div>
-          <div className="text-muted-foreground text-xs whitespace-nowrap mt-0.5">
-            {showDate && <span>{format(parseISO(event.dateStarted), 'MMM d')} • </span>}
-            {isAllDay ? 'All Day' : `${formatTime12Hour(event.timeStart)} - ${formatTime12Hour(event.timeEnd)}`}
+          <div className="flex items-center gap-2 text-muted-foreground text-xs mt-1">
+            <div className="flex items-center gap-1.5">
+              <StatusDot color={statusColor} size="sm" />
+              {showDate && <span>{format(parseISO(event.dateStarted), 'MMM d')}</span>}
+            </div>
+            <div className="flex flex-col items-start">
+              {isAllDay ? (
+                <span>All Day</span>
+              ) : (
+                <>
+                  <span>{formatTime12Hour(event.timeStart)}</span>
+                  <span>{formatTime12Hour(event.timeEnd)}</span>
+                </>
+              )}
+            </div>
           </div>
           {event.details && (
-            <div className="text-muted-foreground text-xs mt-0.5 truncate">{event.details}</div>
+            <div className="text-muted-foreground text-xs mt-1 truncate">{event.details}</div>
           )}
         </div>
       </div>
       
-      {/* Desktop Layout: Three columns */}
-      <div className="hidden sm:flex items-start gap-2 w-[50%] min-w-0">
-        <StatusDot color={statusColor} size="md" className="mt-2" />
-        <span className="font-medium text-base lg:text-[20px] text-foreground break-words">{event.title}</span>
+      {/* Desktop Layout: Sector | Title | Status+Time | Details */}
+      {/* Sector Column - 10% */}
+      <div className="hidden sm:flex items-center justify-center flex-[0_0_10%] overflow-hidden">
+        {event.category ? (
+          <span 
+            className="text-[10px] px-2 py-0.5 rounded-full text-white font-medium whitespace-pre-line text-center leading-tight"
+            style={{ backgroundColor: sectorColor }}
+          >
+            {sectorLabel}
+          </span>
+        ) : null}
       </div>
       
-      <div className="hidden sm:block flex-shrink-0 w-[20%] text-center pt-1">
-        {showDate && (
-          <div className="text-muted-foreground text-xs whitespace-nowrap mb-0.5">
-            {format(parseISO(event.dateStarted), 'MMM d')}
-          </div>
-        )}
-        <div className="text-muted-foreground text-sm lg:text-[16px] whitespace-nowrap">
-          {isAllDay 
-            ? 'All Day' 
-            : `${formatTime12Hour(event.timeStart)} - ${formatTime12Hour(event.timeEnd)}`
-          }
+      {/* Title Column - 45% */}
+      <div className="hidden sm:flex items-center flex-[0_0_45%] min-w-0 overflow-hidden">
+        <span className="font-medium text-base lg:text-[18px] text-foreground line-clamp-2 break-words">{event.title}</span>
+      </div>
+      
+      {/* Time Column with Status Dot - 10% - Right Aligned, Vertical Time */}
+      <div className="hidden sm:flex items-center gap-1.5 flex-[0_0_10%] justify-end overflow-hidden">
+        <StatusDot color={statusColor} size="sm" className="flex-shrink-0" />
+        <div className="flex flex-col items-end text-right min-w-0">
+          {showDate && (
+            <span className="text-muted-foreground text-[10px] whitespace-nowrap">
+              {format(parseISO(event.dateStarted), 'MMM d')}
+            </span>
+          )}
+          {isAllDay ? (
+            <span className="text-muted-foreground text-xs whitespace-nowrap">All Day</span>
+          ) : (
+            <>
+              <span className="text-muted-foreground text-xs whitespace-nowrap leading-tight">
+                {formatTime12Hour(event.timeStart)}
+              </span>
+              <span className="text-muted-foreground text-xs whitespace-nowrap leading-tight">
+                {formatTime12Hour(event.timeEnd)}
+              </span>
+            </>
+          )}
         </div>
       </div>
       
-      <div className="hidden sm:flex items-start gap-2 w-[30%] justify-end">
+      {/* Details Column - 35% */}
+      <div className="hidden sm:flex items-center gap-2 flex-[0_0_35%] justify-end min-w-0 pr-2">
         {event.details && (
-          <div className="text-muted-foreground text-xs lg:text-[14px] text-right flex-1 break-words">
+          <div className="text-muted-foreground text-xs lg:text-[14px] text-right line-clamp-2 flex-1 min-w-0 break-words">
             {event.details}
           </div>
         )}
-        <div className="flex items-center gap-0.5 flex-shrink-0 mt-1">
+        <div className="flex flex-col gap-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
           {onEdit && (
             <Button 
               variant="ghost" 
               size="icon" 
-              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="h-6 w-6 hover:bg-muted"
               onClick={onEdit}
             >
               <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
@@ -915,7 +988,7 @@ function EventRow({ event, onDelete, onEdit, transitionStyle, transitionSpeed, s
             <Button 
               variant="ghost" 
               size="icon" 
-              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="h-6 w-6 hover:bg-muted"
               onClick={onDelete}
             >
               <Trash2 className="h-3.5 w-3.5 text-destructive" />
@@ -1122,15 +1195,13 @@ function SchedulePanel({
 function PersonnelStatusPanel({ 
   onDeletePersonnel, 
   onEditPersonnel,
-  onAddCto,
-  onAddWfh,
+  onAddCtoWfh,
   onAddTravel,
   onAddOther
 }: { 
   onDeletePersonnel: (id: string) => void;
   onEditPersonnel: (personnel: PersonnelStatus) => void;
-  onAddCto: () => void;
-  onAddWfh: () => void;
+  onAddCtoWfh: () => void;
   onAddTravel: () => void;
   onAddOther: () => void;
 }) {
@@ -1158,36 +1229,42 @@ function PersonnelStatusPanel({
 
   return (
     <div className="bg-card border border-border rounded-lg h-full flex flex-col overflow-hidden">
-      <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border overflow-hidden">
-        {/* Combined CTO/LEAVE & WFH Column */}
-        <PersonnelColumn 
-          title="CTO/LEAVE & WFH" 
-          personnel={ctoLeaveWfhPersonnel} 
-          settings={settings}
-          onDeletePersonnel={onDeletePersonnel}
-          onEditPersonnel={onEditPersonnel}
-          onDoubleClick={onAddCto}
-        />
+      <div className="flex-1 flex flex-col sm:flex-row divide-y sm:divide-y-0 sm:divide-x divide-border overflow-hidden">
+        {/* Combined CTO/LEAVE & WFH Column - 30% */}
+        <div className="sm:w-[30%] flex-shrink-0 overflow-hidden">
+          <PersonnelColumn 
+            title="CTO/LEAVE & WFH" 
+            personnel={ctoLeaveWfhPersonnel} 
+            settings={settings}
+            onDeletePersonnel={onDeletePersonnel}
+            onEditPersonnel={onEditPersonnel}
+            onDoubleClick={onAddCtoWfh}
+          />
+        </div>
         
-        {/* IN TRAVEL Column */}
-        <PersonnelColumn 
-          title="IN TRAVEL" 
-          personnel={travelPersonnel} 
-          settings={settings}
-          onDeletePersonnel={onDeletePersonnel}
-          onEditPersonnel={onEditPersonnel}
-          onDoubleClick={onAddTravel}
-        />
+        {/* IN TRAVEL Column - 30% */}
+        <div className="sm:w-[30%] flex-shrink-0 overflow-hidden">
+          <PersonnelColumn 
+            title="IN TRAVEL" 
+            personnel={travelPersonnel} 
+            settings={settings}
+            onDeletePersonnel={onDeletePersonnel}
+            onEditPersonnel={onEditPersonnel}
+            onDoubleClick={onAddTravel}
+          />
+        </div>
         
-        {/* Other Division Requests Column */}
-        <PersonnelColumn 
-          title="OTHER DIVISION REQUESTS" 
-          personnel={otherPersonnel} 
-          settings={settings}
-          onDeletePersonnel={onDeletePersonnel}
-          onEditPersonnel={onEditPersonnel}
-          onDoubleClick={onAddOther}
-        />
+        {/* Other Division Requests Column - 40% */}
+        <div className="sm:w-[40%] flex-shrink-0 overflow-hidden">
+          <PersonnelColumn 
+            title="OTHER DIVISION REQUESTS" 
+            personnel={otherPersonnel} 
+            settings={settings}
+            onDeletePersonnel={onDeletePersonnel}
+            onEditPersonnel={onEditPersonnel}
+            onDoubleClick={onAddOther}
+          />
+        </div>
       </div>
     </div>
   );
@@ -1270,10 +1347,10 @@ function PersonnelColumn({
       className="flex flex-col overflow-hidden h-full cursor-pointer"
       onDoubleClick={onDoubleClick}
     >
-      <div className="px-2 py-1 border-b border-border bg-muted/30 flex-shrink-0">
-        <div className="flex items-center justify-center gap-2">
-          <h3 className="text-base sm:text-lg lg:text-[24px] font-bold text-foreground tracking-wide">{title}</h3>
-          <span className="inline-flex items-center justify-center min-w-[18px] h-5 px-1.5 text-xs font-semibold rounded-full bg-primary/10 text-primary">
+      <div className="px-2 py-2 border-b border-border bg-muted/30 flex-shrink-0 flex items-center justify-center" style={{ height: '52px' }}>
+        <div className="flex items-center justify-center gap-2 w-full">
+          <h3 className="text-xs sm:text-sm lg:text-base font-bold text-foreground tracking-wide text-center leading-tight line-clamp-2 flex-1">{title}</h3>
+          <span className="inline-flex items-center justify-center min-w-[18px] h-5 px-1.5 text-xs font-semibold rounded-full bg-primary/10 text-primary flex-shrink-0">
             {personnel.length}
           </span>
         </div>
@@ -1339,45 +1416,70 @@ function PersonnelItemCompact({
     return `${startDate} - ${endDate}`;
   };
 
+  // Get type badge info for CTO/WFH
+  const getTypeBadge = () => {
+    if (item.type === 'CTO' || item.type === 'FL') {
+      return {
+        label: 'CTO/Leave',
+        className: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+      };
+    } else if (item.type === 'WFH') {
+      return {
+        label: 'WFH',
+        className: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+      };
+    }
+    return null;
+  };
+
+  const typeBadge = getTypeBadge();
+
   const content = (
     <motion.div 
       layout
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
-      className="flex flex-col py-1 px-2 hover:bg-muted/50 rounded group transition-colors"
+      className="flex items-start justify-between gap-2 py-1 px-2 hover:bg-muted/50 rounded group transition-colors"
     >
-      <div className="flex items-start justify-between gap-1">
-        <span className="font-medium text-sm sm:text-base lg:text-[18px] text-foreground truncate">{item.name}</span>
-        <div className="flex items-center gap-0.5 flex-shrink-0">
-          {onEdit && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={onEdit}
-            >
-              <Pencil className="h-3 w-3 text-muted-foreground" />
-            </Button>
-          )}
-          {onDelete && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={onDelete}
-            >
-              <Trash2 className="h-3 w-3 text-destructive" />
-            </Button>
+      <div className="flex-1 min-w-0 flex items-start gap-2">
+        <div className="flex flex-col min-w-0">
+          <span className="font-medium text-sm sm:text-base lg:text-[18px] text-foreground truncate">{item.name}</span>
+          <span className="text-[10px] sm:text-xs lg:text-[12px] text-muted-foreground">
+            {formatDateRange(item.dateStart, item.dateEnd)}
+          </span>
+          {item.location && (
+            <span className="text-[10px] sm:text-xs text-muted-foreground truncate">{item.location}</span>
           )}
         </div>
-      </div>
-      <span className="text-[10px] sm:text-xs lg:text-[12px] text-muted-foreground">
-        {formatDateRange(item.dateStart, item.dateEnd)}
-        {item.location && (
-          <span className="block truncate">{item.location}</span>
+        {typeBadge && (
+          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium flex-shrink-0 mt-0.5 ${typeBadge.className}`}>
+            {typeBadge.label}
+          </span>
         )}
-      </span>
+      </div>
+      <div className="flex flex-col gap-0.5 flex-shrink-0">
+        {onEdit && (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={onEdit}
+          >
+            <Pencil className="h-3 w-3 text-muted-foreground" />
+          </Button>
+        )}
+        {onDelete && (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={onDelete}
+          >
+            <Trash2 className="h-3 w-3 text-destructive" />
+          </Button>
+        )}
+      </div>
     </motion.div>
   );
 
@@ -1474,26 +1576,29 @@ function ProjectItem({
           <Plus className="h-4 w-4" />
         </Button>
         
-        {onEdit && (
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity ml-1"
-            onClick={onEdit}
-          >
-            <Pencil className="h-4 w-4 text-muted-foreground" />
-          </Button>
-        )}
-        {onDelete && (
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity ml-1"
-            onClick={onDelete}
-          >
-            <Trash2 className="h-4 w-4 text-destructive" />
-          </Button>
-        )}
+        {/* Edit/Delete buttons - stacked vertically */}
+        <div className="flex flex-col gap-0.5 ml-1">
+          {onEdit && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={onEdit}
+            >
+              <Pencil className="h-4 w-4 text-muted-foreground" />
+            </Button>
+          )}
+          {onDelete && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+              onClick={onDelete}
+            >
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          )}
+        </div>
       </div>
     </motion.div>
   );
@@ -1540,22 +1645,233 @@ function ProjectItem({
   return content;
 }
 
-// Project Request Panel
-function ProjectRequestPanel({ 
-  onDeleteProject, 
-  onEditProject,
-  onDoubleClick 
+// Urgent Concern Item Component
+function UrgentConcernItem({ 
+  concern, 
+  onDelete,
+  onEdit 
 }: { 
+  concern: UrgentConcern;
+  onDelete?: () => void;
+  onEdit?: () => void;
+}) {
+  const content = (
+    <motion.div 
+      layout
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      className="flex items-center justify-between py-2 px-2 sm:px-3 hover:bg-muted/50 rounded group transition-colors"
+    >
+      <div className="flex-1 min-w-0">
+        <span className="font-medium text-sm sm:text-base lg:text-[18px] text-foreground truncate block">{concern.title}</span>
+        {concern.description && (
+          <span className="text-xs sm:text-sm text-muted-foreground truncate block">{concern.description}</span>
+        )}
+      </div>
+      <div className="flex flex-col gap-0.5 flex-shrink-0 ml-2">
+        {onEdit && (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={onEdit}
+          >
+            <Pencil className="h-4 w-4 text-muted-foreground" />
+          </Button>
+        )}
+        {onDelete && (
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={onDelete}
+          >
+            <Trash2 className="h-4 w-4 text-destructive" />
+          </Button>
+        )}
+      </div>
+    </motion.div>
+  );
+
+  // Wrap with context menu if actions are available
+  if (onEdit || onDelete) {
+    return (
+      <ContextMenu>
+        <ContextMenuTrigger asChild>
+          {content}
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+          {onEdit && (
+            <ContextMenuItem onClick={onEdit}>
+              <Pencil className="h-4 w-4 mr-2" />
+              Edit Concern
+            </ContextMenuItem>
+          )}
+          {onDelete && (
+            <>
+              <ContextMenuSeparator />
+              <ContextMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Concern
+              </ContextMenuItem>
+            </>
+          )}
+        </ContextMenuContent>
+      </ContextMenu>
+    );
+  }
+
+  return content;
+}
+
+// Urgent Concern Column with overflow transition
+function UrgentConcernColumn({ 
+  concerns, 
+  settings,
+  onDeleteConcern,
+  onEditConcern,
+  onDoubleClick
+}: { 
+  concerns: UrgentConcern[];
+  settings: { transitionStyle: TransitionStyle; transitionSpeed: string; smoothScrollEnabled: boolean; customTransitionSeconds: number };
+  onDeleteConcern: (id: string) => void;
+  onEditConcern: (concern: UrgentConcern) => void;
+  onDoubleClick: () => void;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const transitionSpeed = getTransitionSpeed(settings.transitionSpeed, settings.customTransitionSeconds);
+  
+  // Concern item height: ~48px
+  const { currentItems, hasOverflow, currentPage, totalPages, containerHeight } = useOverflowTransition(
+    concerns,
+    containerRef,
+    48,
+    settings
+  );
+
+  const isPaginationMode = ['fade', 'slideUp', 'slideLeft'].includes(settings.transitionStyle);
+
+  const pageVariants = {
+    fade: {
+      initial: { opacity: 0 },
+      animate: { opacity: 1, transition: { duration: transitionSpeed } },
+      exit: { opacity: 0, transition: { duration: transitionSpeed / 2 } },
+    },
+    slideUp: {
+      initial: { opacity: 0, y: 30 },
+      animate: { opacity: 1, y: 0, transition: { duration: transitionSpeed } },
+      exit: { opacity: 0, y: -30, transition: { duration: transitionSpeed / 2 } },
+    },
+    slideLeft: {
+      initial: { opacity: 0, x: 30 },
+      animate: { opacity: 1, x: 0, transition: { duration: transitionSpeed } },
+      exit: { opacity: 0, x: -30, transition: { duration: transitionSpeed / 2 } },
+    },
+    static: {
+      initial: { opacity: 1 },
+      animate: { opacity: 1 },
+      exit: { opacity: 1 },
+    },
+  };
+
+  const currentPageVariant = isPaginationMode && hasOverflow
+    ? pageVariants[settings.transitionStyle as 'fade' | 'slideUp' | 'slideLeft']
+    : pageVariants.static;
+
+  const renderItems = hasOverflow && isPaginationMode ? currentItems : concerns;
+
+  // For gentle continuous scroll, we don't duplicate items - we use CSS spacer instead
+  const isGentleScroll = settings.transitionStyle === 'gentleContinuousScroll';
+
+  // Use a stable key that changes when page content changes
+  const contentKey = isGentleScroll 
+    ? 'continuous-scroll' 
+    : (isPaginationMode && hasOverflow 
+      ? `page-${currentPage}-${totalPages}-${currentItems.map(c => c.id).join('-')}` 
+      : `all-${concerns.map(c => c.id).join('-')}`);
+  
+  // For gentle continuous scroll, don't use AnimatePresence to avoid interrupting the scroll
+  const shouldUseAnimatePresence = !isGentleScroll;
+
+  return (
+    <div 
+      className="flex flex-col overflow-hidden h-full cursor-pointer"
+      onDoubleClick={onDoubleClick}
+    >
+      <div className="px-2 py-1 border-b border-border bg-muted/30 flex-shrink-0">
+        <div className="flex items-center justify-center gap-2">
+          <h3 className="text-base sm:text-lg lg:text-[20px] font-bold text-foreground tracking-wide">Urgent Concerns</h3>
+          <span className="inline-flex items-center justify-center min-w-[18px] h-5 px-1.5 text-xs font-semibold rounded-full bg-primary/10 text-primary">
+            {concerns.length}
+          </span>
+        </div>
+      </div>
+      <div 
+        ref={containerRef}
+        className="flex-1 overflow-y-auto p-1 scrollbar-hide min-h-0"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
+        {concerns.length === 0 ? (
+          <div className="text-center py-4" />
+        ) : shouldUseAnimatePresence ? (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={contentKey}
+              initial={currentPageVariant.initial}
+              animate={currentPageVariant.animate}
+              exit={currentPageVariant.exit}
+              className="space-y-0.5"
+              data-content-measure
+            >
+              {renderItems.map((concern, index) => (
+                <UrgentConcernItem key={`${concern.id}-${index}`} concern={concern} onDelete={() => onDeleteConcern(concern.id)} onEdit={() => onEditConcern(concern)} />
+              ))}
+            </motion.div>
+          </AnimatePresence>
+        ) : (
+          <div className="space-y-0.5" data-content-measure>
+            {/* Original items - this is what we measure for overflow detection */}
+            <div data-original-content>
+              {concerns.map((concern, index) => (
+                <UrgentConcernItem key={`${concern.id}-${index}`} concern={concern} onDelete={() => onDeleteConcern(concern.id)} onEdit={() => onEditConcern(concern)} />
+              ))}
+            </div>
+            {/* Spacer - allows last item to fully exit before first item appears */}
+            {isGentleScroll && hasOverflow && (
+              <div style={{ height: containerHeight }} aria-hidden="true" />
+            )}
+            {/* Duplicate items for seamless loop */}
+            {isGentleScroll && hasOverflow && concerns.map((concern, index) => (
+              <UrgentConcernItem key={`${concern.id}-dup-${index}`} concern={concern} onDelete={() => onDeleteConcern(concern.id)} onEdit={() => onEditConcern(concern)} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Project Column with overflow transition
+function ProjectColumn({ 
+  projects, 
+  settings,
+  onDeleteProject,
+  onEditProject,
+  onDoubleClick
+}: { 
+  projects: Project[];
+  settings: { transitionStyle: TransitionStyle; transitionSpeed: string; smoothScrollEnabled: boolean; customTransitionSeconds: number };
   onDeleteProject: (id: string) => void;
   onEditProject: (project: Project) => void;
   onDoubleClick: () => void;
 }) {
-  const { projects, incrementProject, decrementProject, settings } = useScheduleStore();
+  const { incrementProject, decrementProject } = useScheduleStore();
   const containerRef = useRef<HTMLDivElement>(null);
   const transitionSpeed = getTransitionSpeed(settings.transitionSpeed, settings.customTransitionSeconds);
-
-  // Project item height: 20px font + padding = ~52px
-  const { currentItems, hasOverflow, currentPage, totalPages } = useOverflowTransition(
+  
+  // Project item height: ~52px
+  const { currentItems, hasOverflow, currentPage, totalPages, containerHeight } = useOverflowTransition(
     projects,
     containerRef,
     52,
@@ -1593,12 +1909,10 @@ function ProjectRequestPanel({
 
   const renderItems = hasOverflow && isPaginationMode ? currentItems : projects;
 
-  // For gentle continuous scroll, duplicate items for seamless loop
+  // For gentle continuous scroll, we don't duplicate items - we use CSS spacer instead
   const isGentleScroll = settings.transitionStyle === 'gentleContinuousScroll';
-  const displayItems = hasOverflow && isGentleScroll ? [...projects, ...projects] : renderItems;
 
   // Use a stable key that changes when page content changes
-  // For continuous scroll modes, use a stable key to prevent re-renders
   const contentKey = isGentleScroll 
     ? 'continuous-scroll' 
     : (isPaginationMode && hasOverflow 
@@ -1610,22 +1924,24 @@ function ProjectRequestPanel({
 
   return (
     <div 
-      className="bg-card border border-border rounded-lg h-full flex flex-col overflow-hidden cursor-pointer"
+      className="flex flex-col overflow-hidden h-full cursor-pointer"
       onDoubleClick={onDoubleClick}
     >
-      <div className="px-2 py-1 border-b border-border bg-muted/30 flex items-center gap-2">
-        <h2 className="text-base sm:text-lg lg:text-[24px] font-bold text-foreground tracking-wide">ONGOING PROJECT REQUEST</h2>
-        <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-semibold rounded-full bg-primary/10 text-primary">
-          {projects.length}
-        </span>
+      <div className="px-2 py-1 border-b border-border bg-muted/30 flex-shrink-0">
+        <div className="flex items-center justify-center gap-2">
+          <h3 className="text-base sm:text-lg lg:text-[20px] font-bold text-foreground tracking-wide">Ongoing Project Requests</h3>
+          <span className="inline-flex items-center justify-center min-w-[18px] h-5 px-1.5 text-xs font-semibold rounded-full bg-primary/10 text-primary">
+            {projects.length}
+          </span>
+        </div>
       </div>
       <div 
         ref={containerRef}
-        className="flex-1 overflow-y-auto p-1 sm:p-1.5 scrollbar-hide"
+        className="flex-1 overflow-y-auto p-1 scrollbar-hide min-h-0"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {projects.length === 0 ? (
-          <div className="flex items-center justify-center h-16" />
+          <div className="text-center py-4" />
         ) : shouldUseAnimatePresence ? (
           <AnimatePresence mode="wait">
             <motion.div
@@ -1636,32 +1952,93 @@ function ProjectRequestPanel({
               className="space-y-0.5"
               data-content-measure
             >
-              {displayItems.map((project, index) => (
+              {renderItems.map((project, index) => (
                 <ProjectItem 
-                  key={`${project.id}-${index}`}
-                  project={project}
+                  key={`${project.id}-${index}`} 
+                  project={project} 
                   onIncrement={() => incrementProject(project.id)}
                   onDecrement={() => decrementProject(project.id)}
-                  onDelete={() => onDeleteProject(project.id)}
-                  onEdit={() => onEditProject(project)}
+                  onDelete={() => onDeleteProject(project.id)} 
+                  onEdit={() => onEditProject(project)} 
                 />
               ))}
             </motion.div>
           </AnimatePresence>
         ) : (
           <div className="space-y-0.5" data-content-measure>
-            {displayItems.map((project, index) => (
+            {/* Original items - this is what we measure for overflow detection */}
+            <div data-original-content>
+              {projects.map((project, index) => (
+                <ProjectItem 
+                  key={`${project.id}-${index}`} 
+                  project={project} 
+                  onIncrement={() => incrementProject(project.id)}
+                  onDecrement={() => decrementProject(project.id)}
+                  onDelete={() => onDeleteProject(project.id)} 
+                  onEdit={() => onEditProject(project)} 
+                />
+              ))}
+            </div>
+            {/* Spacer - allows last item to fully exit before first item appears */}
+            {isGentleScroll && hasOverflow && (
+              <div style={{ height: containerHeight }} aria-hidden="true" />
+            )}
+            {/* Duplicate items for seamless loop */}
+            {isGentleScroll && hasOverflow && projects.map((project, index) => (
               <ProjectItem 
-                key={`${project.id}-${index}`}
-                project={project}
+                key={`${project.id}-dup-${index}`} 
+                project={project} 
                 onIncrement={() => incrementProject(project.id)}
                 onDecrement={() => decrementProject(project.id)}
-                onDelete={() => onDeleteProject(project.id)}
-                onEdit={() => onEditProject(project)}
+                onDelete={() => onDeleteProject(project.id)} 
+                onEdit={() => onEditProject(project)} 
               />
             ))}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+// Combined Panel 4 - Two Column Layout (Urgent Concerns + Ongoing Project Requests)
+function CombinedPanel4({ 
+  onDeleteProject, 
+  onEditProject,
+  onDoubleClickProject,
+  onDeleteUrgentConcern,
+  onEditUrgentConcern,
+  onDoubleClickUrgentConcern
+}: { 
+  onDeleteProject: (id: string) => void;
+  onEditProject: (project: Project) => void;
+  onDoubleClickProject: () => void;
+  onDeleteUrgentConcern: (id: string) => void;
+  onEditUrgentConcern: (concern: UrgentConcern) => void;
+  onDoubleClickUrgentConcern: () => void;
+}) {
+  const { projects, urgentConcerns, settings } = useScheduleStore();
+  
+  return (
+    <div className="bg-card border border-border rounded-lg h-full flex flex-col overflow-hidden">
+      <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-border overflow-hidden">
+        {/* Left Column: Urgent Concerns */}
+        <UrgentConcernColumn 
+          concerns={urgentConcerns}
+          settings={settings}
+          onDeleteConcern={onDeleteUrgentConcern}
+          onEditConcern={onEditUrgentConcern}
+          onDoubleClick={onDoubleClickUrgentConcern}
+        />
+        
+        {/* Right Column: Ongoing Project Requests */}
+        <ProjectColumn 
+          projects={projects}
+          settings={settings}
+          onDeleteProject={onDeleteProject}
+          onEditProject={onEditProject}
+          onDoubleClick={onDoubleClickProject}
+        />
       </div>
     </div>
   );
@@ -1679,6 +2056,7 @@ function EditEventModal({
 }) {
   const { updateEvent } = useScheduleStore();
   const [title, setTitle] = useState('');
+  const [category, setCategory] = useState<EventCategory | ''>('');
   const [dateStarted, setDateStarted] = useState('');
   const [timeStart, setTimeStart] = useState('');
   const [timeEnd, setTimeEnd] = useState('');
@@ -1692,6 +2070,7 @@ function EditEventModal({
     if (event) {
       queueMicrotask(() => {
         setTitle(event.title);
+        setCategory(event.category || '');
         setDateStarted(event.dateStarted);
         setTimeStart(event.timeStart);
         setTimeEnd(event.timeEnd);
@@ -1736,6 +2115,7 @@ function EditEventModal({
       timeStart,
       timeEnd,
       details: details.trim() || undefined,
+      category: category || undefined,
     });
 
     onClose();
@@ -1762,6 +2142,28 @@ function EditEventModal({
               placeholder="Enter event title"
               className="text-base"
             />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="edit-event-category" className="text-base">Sector</Label>
+            <Select value={category} onValueChange={(value) => setCategory(value as EventCategory | '')}>
+              <SelectTrigger id="edit-event-category" className="text-base">
+                <SelectValue placeholder="Select sector" />
+              </SelectTrigger>
+              <SelectContent>
+                {EVENT_CATEGORIES.map((cat) => (
+                  <SelectItem key={cat.value} value={cat.value}>
+                    <div className="flex items-center gap-2">
+                      <span 
+                        className="w-3 h-3 rounded-full" 
+                        style={{ backgroundColor: cat.color }}
+                      />
+                      {cat.label}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           
           <div className="space-y-2">
@@ -1842,6 +2244,7 @@ function AddEventModal({
 }) {
   const { addEvent } = useScheduleStore();
   const [title, setTitle] = useState('');
+  const [category, setCategory] = useState<EventCategory | ''>('');
   const [dateStarted, setDateStarted] = useState(() => defaultDate || format(new Date(), 'yyyy-MM-dd'));
   const [timeStart, setTimeStart] = useState('09:00');
   const [timeEnd, setTimeEnd] = useState('10:00');
@@ -1855,6 +2258,7 @@ function AddEventModal({
     if (open) {
       queueMicrotask(() => {
         setTitle('');
+        setCategory('');
         setDateStarted(defaultDate || format(new Date(), 'yyyy-MM-dd'));
         setTimeStart('09:00');
         setTimeEnd('10:00');
@@ -1901,10 +2305,12 @@ function AddEventModal({
       timeStart,
       timeEnd,
       details: details.trim() || undefined,
+      category: category || undefined,
     });
 
     // Reset form but keep modal open
     setTitle('');
+    setCategory('');
     setDateStarted(format(new Date(), 'yyyy-MM-dd'));
     setTimeStart('09:00');
     setTimeEnd('10:00');
@@ -1933,6 +2339,28 @@ function AddEventModal({
               placeholder="Enter event title"
               className="text-base"
             />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="event-category" className="text-base">Sector</Label>
+            <Select value={category} onValueChange={(value) => setCategory(value as EventCategory | '')}>
+              <SelectTrigger id="event-category" className="text-base">
+                <SelectValue placeholder="Select sector" />
+              </SelectTrigger>
+              <SelectContent>
+                {EVENT_CATEGORIES.map((cat) => (
+                  <SelectItem key={cat.value} value={cat.value}>
+                    <div className="flex items-center gap-2">
+                      <span 
+                        className="w-3 h-3 rounded-full" 
+                        style={{ backgroundColor: cat.color }}
+                      />
+                      {cat.label}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           
           <div className="space-y-2">
@@ -2001,16 +2429,146 @@ function AddEventModal({
   );
 }
 
-// Add Personnel Modal (CTO/FL, WFH, Travel)
-function AddPersonnelModal({ 
+// Add CTO/Leave & WFH Modal (Combined Form)
+function AddCtoWfhModal({ 
   open, 
-  onClose, 
-  type,
+  onClose,
   defaultDate
 }: { 
   open: boolean; 
   onClose: () => void;
-  type: 'CTO' | 'FL' | 'WFH' | 'TRAVEL';
+  defaultDate?: string | null;
+}) {
+  const { addPersonnelStatus } = useScheduleStore();
+  const [name, setName] = useState('');
+  const [requestType, setRequestType] = useState<'CTO' | 'WFH'>('CTO');
+  const [dateStart, setDateStart] = useState(() => defaultDate || format(new Date(), 'yyyy-MM-dd'));
+  const [dateEnd, setDateEnd] = useState(() => defaultDate || format(new Date(), 'yyyy-MM-dd'));
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Reset form with defaultDate when modal opens
+  useEffect(() => {
+    if (open) {
+      queueMicrotask(() => {
+        setName('');
+        setRequestType('CTO');
+        setDateStart(defaultDate || format(new Date(), 'yyyy-MM-dd'));
+        setDateEnd(defaultDate || format(new Date(), 'yyyy-MM-dd'));
+        setError('');
+      });
+    }
+  }, [open, defaultDate]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Prevent double submission
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    
+    setError('');
+
+    if (!name.trim()) {
+      setError('Personnel name is required');
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Add as CTO/FL type if CTO/Leave is selected, or WFH if WFH is selected
+    addPersonnelStatus({
+      name: name.trim(),
+      type: requestType === 'CTO' ? 'CTO' : 'WFH',
+      dateStart,
+      dateEnd,
+    });
+
+    // Reset form but keep modal open
+    setName('');
+    setDateStart(format(new Date(), 'yyyy-MM-dd'));
+    setDateEnd(format(new Date(), 'yyyy-MM-dd'));
+    
+    // Small delay to prevent double submission
+    setTimeout(() => setIsSubmitting(false), 500);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-xl">Add CTO/Leave & WFH</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          
+          <div className="space-y-2">
+            <Label htmlFor="ctoWfh-name" className="text-base">Personnel Name *</Label>
+            <Input 
+              id="ctoWfh-name" 
+              value={name} 
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Enter name"
+              className="text-base"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="ctoWfh-type" className="text-base">Request Type *</Label>
+            <Select 
+              value={requestType} 
+              onValueChange={(value: 'CTO' | 'WFH') => setRequestType(value)}
+            >
+              <SelectTrigger className="text-base">
+                <SelectValue placeholder="Select request type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="CTO" className="text-base">CTO/Leave</SelectItem>
+                <SelectItem value="WFH" className="text-base">WFH</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="ctoWfh-date-start" className="text-base">Date Start *</Label>
+              <Input 
+                id="ctoWfh-date-start" 
+                type="date" 
+                value={dateStart} 
+                onChange={(e) => setDateStart(e.target.value)}
+                className="text-base"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ctoWfh-date-end" className="text-base">Date End *</Label>
+              <Input 
+                id="ctoWfh-date-end" 
+                type="date" 
+                value={dateEnd} 
+                onChange={(e) => setDateEnd(e.target.value)}
+                className="text-base"
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose} className="text-base">Cancel</Button>
+            <Button type="submit" className="text-base" disabled={isSubmitting}>{isSubmitting ? 'Adding...' : 'Add'}</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Add In Travel Modal
+function AddTravelModal({ 
+  open, 
+  onClose,
+  defaultDate
+}: { 
+  open: boolean; 
+  onClose: () => void;
   defaultDate?: string | null;
 }) {
   const { addPersonnelStatus } = useScheduleStore();
@@ -2034,8 +2592,6 @@ function AddPersonnelModal({
     }
   }, [open, defaultDate]);
 
-  const title = type === 'TRAVEL' ? 'Add In Travel' : `Add ${type === 'CTO' || type === 'FL' ? 'CTO / FL' : 'WFH'}`;
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -2051,7 +2607,7 @@ function AddPersonnelModal({
       return;
     }
 
-    if (type === 'TRAVEL' && !location.trim()) {
+    if (!location.trim()) {
       setError('Location is required');
       setIsSubmitting(false);
       return;
@@ -2059,10 +2615,10 @@ function AddPersonnelModal({
 
     addPersonnelStatus({
       name: name.trim(),
-      type,
+      type: 'TRAVEL',
       dateStart,
       dateEnd,
-      location: type === 'TRAVEL' ? location.trim() : undefined,
+      location: location.trim(),
     });
 
     // Reset form but keep modal open
@@ -2079,15 +2635,15 @@ function AddPersonnelModal({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-xl">{title}</DialogTitle>
+          <DialogTitle className="text-xl">Add In Travel</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-5">
           {error && <p className="text-sm text-destructive">{error}</p>}
           
           <div className="space-y-2">
-            <Label htmlFor="personnel-name" className="text-base">Personnel Name *</Label>
+            <Label htmlFor="travel-name" className="text-base">Personnel Name *</Label>
             <Input 
-              id="personnel-name" 
+              id="travel-name" 
               value={name} 
               onChange={(e) => setName(e.target.value)}
               placeholder="Enter name"
@@ -2097,9 +2653,9 @@ function AddPersonnelModal({
           
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="date-start" className="text-base">Date Start *</Label>
+              <Label htmlFor="travel-date-start" className="text-base">Date Start *</Label>
               <Input 
-                id="date-start" 
+                id="travel-date-start" 
                 type="date" 
                 value={dateStart} 
                 onChange={(e) => setDateStart(e.target.value)}
@@ -2107,9 +2663,9 @@ function AddPersonnelModal({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="date-end" className="text-base">Date End *</Label>
+              <Label htmlFor="travel-date-end" className="text-base">Date End *</Label>
               <Input 
-                id="date-end" 
+                id="travel-date-end" 
                 type="date" 
                 value={dateEnd} 
                 onChange={(e) => setDateEnd(e.target.value)}
@@ -2118,22 +2674,120 @@ function AddPersonnelModal({
             </div>
           </div>
           
-          {type === 'TRAVEL' && (
-            <div className="space-y-2">
-              <Label htmlFor="location" className="text-base">Location *</Label>
-              <Input 
-                id="location" 
-                value={location} 
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="Enter location"
-                className="text-base"
-              />
-            </div>
-          )}
+          <div className="space-y-2">
+            <Label htmlFor="travel-location" className="text-base">Location *</Label>
+            <Input 
+              id="travel-location" 
+              value={location} 
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="Enter location"
+              className="text-base"
+            />
+          </div>
           
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose} className="text-base">Cancel</Button>
             <Button type="submit" className="text-base" disabled={isSubmitting}>{isSubmitting ? 'Adding...' : 'Add'}</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Add Other Division Request Modal
+function AddOtherDivisionModal({ 
+  open, 
+  onClose 
+}: { 
+  open: boolean; 
+  onClose: () => void;
+}) {
+  const { addPersonnelStatus } = useScheduleStore();
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const today = format(new Date(), 'yyyy-MM-dd');
+
+  // Reset form when modal opens
+  useEffect(() => {
+    if (open) {
+      queueMicrotask(() => {
+        setTitle('');
+        setDescription('');
+        setError('');
+      });
+    }
+  }, [open]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Prevent double submission
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    
+    setError('');
+
+    if (!title.trim()) {
+      setError('Title is required');
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Add as OTHER type with title as name, and description in location field
+    addPersonnelStatus({
+      name: title.trim(),
+      type: 'OTHER',
+      dateStart: today,
+      dateEnd: today,
+      location: description.trim() || undefined,
+    });
+
+    // Reset form but keep modal open
+    setTitle('');
+    setDescription('');
+    
+    // Small delay to prevent double submission
+    setTimeout(() => setIsSubmitting(false), 500);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-xl">Add Other Division Request</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          
+          <div className="space-y-2">
+            <Label htmlFor="other-title" className="text-base">Title *</Label>
+            <Input 
+              id="other-title" 
+              value={title} 
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Enter request title"
+              className="text-base"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="other-description" className="text-base">Description (Optional)</Label>
+            <Textarea 
+              id="other-description" 
+              value={description} 
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Enter description"
+              className="text-base min-h-[100px]"
+              rows={4}
+            />
+          </div>
+          
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose} className="text-base">Cancel</Button>
+            <Button type="submit" className="text-base" disabled={isSubmitting}>{isSubmitting ? 'Adding...' : 'Add Request'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -2378,6 +3032,74 @@ function EditTickerMessageModal({
   );
 }
 
+// Select Ticker Modal for Edit or Delete
+function SelectTickerModal({
+  open,
+  onClose,
+  onSelect,
+  mode
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSelect: (ticker: TickerMessage) => void;
+  mode: 'edit' | 'delete';
+}) {
+  const { tickerMessages } = useScheduleStore();
+
+  return (
+    <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
+      <DialogContent className="sm:max-w-md" onInteractOutside={(e) => e.preventDefault()}>
+        <DialogHeader>
+          <DialogTitle className="text-xl">
+            {mode === 'edit' ? 'Select Renewing Project to Edit' : 'Select Renewing Project to Delete'}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-2 max-h-[400px] overflow-y-auto">
+          {tickerMessages.length === 0 ? (
+            <p className="text-muted-foreground text-center py-4">No renewing projects found.</p>
+          ) : (
+            tickerMessages.map((ticker) => (
+              <div
+                key={ticker.id}
+                className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/50 cursor-pointer transition-colors"
+                onClick={() => {
+                  onSelect(ticker);
+                }}
+              >
+                <span className="text-foreground truncate flex-1">{ticker.message}</span>
+                <Button
+                  variant={mode === 'edit' ? 'ghost' : 'destructive'}
+                  size="sm"
+                  className="ml-2 flex-shrink-0"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelect(ticker);
+                  }}
+                >
+                  {mode === 'edit' ? (
+                    <>
+                      <Pencil className="h-4 w-4 mr-1" />
+                      Edit
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Delete
+                    </>
+                  )}
+                </Button>
+              </div>
+            ))
+          )}
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onClose} className="text-base">Close</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // Edit Personnel Modal
 function EditPersonnelModal({ 
   open, 
@@ -2390,9 +3112,11 @@ function EditPersonnelModal({
 }) {
   const { updatePersonnelStatus } = useScheduleStore();
   const [name, setName] = useState('');
+  const [personnelType, setPersonnelType] = useState<'CTO' | 'WFH' | 'TRAVEL' | 'OTHER'>('CTO');
   const [dateStart, setDateStart] = useState('');
   const [dateEnd, setDateEnd] = useState('');
   const [location, setLocation] = useState('');
+  const [description, setDescription] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -2401,9 +3125,11 @@ function EditPersonnelModal({
     if (personnel) {
       queueMicrotask(() => {
         setName(personnel.name);
+        setPersonnelType(personnel.type === 'FL' ? 'CTO' : personnel.type);
         setDateStart(personnel.dateStart);
         setDateEnd(personnel.dateEnd);
         setLocation(personnel.location || '');
+        setDescription(personnel.location || '');
       });
     }
   }, [personnel]);
@@ -2418,12 +3144,12 @@ function EditPersonnelModal({
     setError('');
 
     if (!name.trim()) {
-      setError('Personnel name is required');
+      setError(personnel.type === 'OTHER' ? 'Title is required' : 'Personnel name is required');
       setIsSubmitting(false);
       return;
     }
 
-    if (personnel.type === 'TRAVEL' && !location.trim()) {
+    if (personnelType === 'TRAVEL' && !location.trim()) {
       setError('Location is required');
       setIsSubmitting(false);
       return;
@@ -2431,9 +3157,10 @@ function EditPersonnelModal({
 
     updatePersonnelStatus(personnel.id, {
       name: name.trim(),
+      type: personnelType,
       dateStart,
       dateEnd,
-      location: personnel.type === 'TRAVEL' ? location.trim() : undefined,
+      location: personnelType === 'TRAVEL' ? location.trim() : personnelType === 'OTHER' ? description.trim() || undefined : undefined,
     });
 
     onClose();
@@ -2442,62 +3169,180 @@ function EditPersonnelModal({
 
   if (!personnel) return null;
 
-  const title = personnel.type === 'TRAVEL' ? 'Edit In Travel' : `Edit ${personnel.type === 'CTO' || personnel.type === 'FL' ? 'CTO / LEAVE' : 'WFH'}`;
+  const getModalTitle = () => {
+    switch (personnel.type) {
+      case 'CTO':
+      case 'FL':
+        return 'Edit CTO/Leave & WFH';
+      case 'WFH':
+        return 'Edit CTO/Leave & WFH';
+      case 'TRAVEL':
+        return 'Edit In Travel';
+      case 'OTHER':
+        return 'Edit Other Division Request';
+      default:
+        return 'Edit Entry';
+    }
+  };
+
+  const isOtherType = personnel.type === 'OTHER';
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-xl">{title}</DialogTitle>
+          <DialogTitle className="text-xl">{getModalTitle()}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-5">
           {error && <p className="text-sm text-destructive">{error}</p>}
           
-          <div className="space-y-2">
-            <Label htmlFor="edit-personnel-name" className="text-base">Personnel Name *</Label>
-            <Input 
-              id="edit-personnel-name" 
-              value={name} 
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Enter name"
-              className="text-base"
-            />
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-date-start" className="text-base">Date Start *</Label>
-              <Input 
-                id="edit-date-start" 
-                type="date" 
-                value={dateStart} 
-                onChange={(e) => setDateStart(e.target.value)}
-                className="text-base"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-date-end" className="text-base">Date End *</Label>
-              <Input 
-                id="edit-date-end" 
-                type="date" 
-                value={dateEnd} 
-                onChange={(e) => setDateEnd(e.target.value)}
-                className="text-base"
-              />
-            </div>
-          </div>
-          
-          {personnel.type === 'TRAVEL' && (
-            <div className="space-y-2">
-              <Label htmlFor="edit-location" className="text-base">Location *</Label>
-              <Input 
-                id="edit-location" 
-                value={location} 
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="Enter location"
-                className="text-base"
-              />
-            </div>
+          {isOtherType ? (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="edit-other-title" className="text-base">Title *</Label>
+                <Input 
+                  id="edit-other-title" 
+                  value={name} 
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Enter request title"
+                  className="text-base"
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-other-date-start" className="text-base">Date Start *</Label>
+                  <Input 
+                    id="edit-other-date-start" 
+                    type="date" 
+                    value={dateStart} 
+                    onChange={(e) => setDateStart(e.target.value)}
+                    className="text-base"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-other-date-end" className="text-base">Date End *</Label>
+                  <Input 
+                    id="edit-other-date-end" 
+                    type="date" 
+                    value={dateEnd} 
+                    onChange={(e) => setDateEnd(e.target.value)}
+                    className="text-base"
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="edit-other-description" className="text-base">Description (Optional)</Label>
+                <Textarea 
+                  id="edit-other-description" 
+                  value={description} 
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Enter description"
+                  className="text-base min-h-[100px]"
+                  rows={4}
+                />
+              </div>
+            </>
+          ) : personnel.type === 'TRAVEL' ? (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="edit-personnel-name" className="text-base">Personnel Name *</Label>
+                <Input 
+                  id="edit-personnel-name" 
+                  value={name} 
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Enter name"
+                  className="text-base"
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-date-start" className="text-base">Date Start *</Label>
+                  <Input 
+                    id="edit-date-start" 
+                    type="date" 
+                    value={dateStart} 
+                    onChange={(e) => setDateStart(e.target.value)}
+                    className="text-base"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-date-end" className="text-base">Date End *</Label>
+                  <Input 
+                    id="edit-date-end" 
+                    type="date" 
+                    value={dateEnd} 
+                    onChange={(e) => setDateEnd(e.target.value)}
+                    className="text-base"
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="edit-location" className="text-base">Location *</Label>
+                <Input 
+                  id="edit-location" 
+                  value={location} 
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="Enter location"
+                  className="text-base"
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="edit-ctoWfh-name" className="text-base">Personnel Name *</Label>
+                <Input 
+                  id="edit-ctoWfh-name" 
+                  value={name} 
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Enter name"
+                  className="text-base"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-ctoWfh-type" className="text-base">Request Type *</Label>
+                <Select 
+                  value={personnelType === 'CTO' || personnelType === 'FL' ? 'CTO' : personnelType} 
+                  onValueChange={(value: 'CTO' | 'WFH') => setPersonnelType(value)}
+                >
+                  <SelectTrigger className="text-base">
+                    <SelectValue placeholder="Select request type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="CTO" className="text-base">CTO/Leave</SelectItem>
+                    <SelectItem value="WFH" className="text-base">WFH</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-ctoWfh-date-start" className="text-base">Date Start *</Label>
+                  <Input 
+                    id="edit-ctoWfh-date-start" 
+                    type="date" 
+                    value={dateStart} 
+                    onChange={(e) => setDateStart(e.target.value)}
+                    className="text-base"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-ctoWfh-date-end" className="text-base">Date End *</Label>
+                  <Input 
+                    id="edit-ctoWfh-date-end" 
+                    type="date" 
+                    value={dateEnd} 
+                    onChange={(e) => setDateEnd(e.target.value)}
+                    className="text-base"
+                  />
+                </div>
+              </div>
+            </>
           )}
           
           <DialogFooter>
@@ -2599,6 +3444,195 @@ function EditProjectModal({
               onChange={(e) => setNumber(e.target.value)}
               placeholder="Enter number"
               className="text-base"
+            />
+          </div>
+          
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose} className="text-base">Cancel</Button>
+            <Button type="submit" className="text-base" disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Save Changes'}</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Add Urgent Concern Modal
+function AddUrgentConcernModal({ 
+  open, 
+  onClose 
+}: { 
+  open: boolean; 
+  onClose: () => void;
+}) {
+  const { addUrgentConcern } = useScheduleStore();
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Reset form when modal opens
+  useEffect(() => {
+    if (open) {
+      queueMicrotask(() => {
+        setTitle('');
+        setDescription('');
+        setError('');
+      });
+    }
+  }, [open]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Prevent double submission
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    
+    setError('');
+
+    if (!title.trim()) {
+      setError('Title is required');
+      setIsSubmitting(false);
+      return;
+    }
+
+    addUrgentConcern({
+      title: title.trim(),
+      description: description.trim() || undefined,
+    });
+
+    // Reset form but keep modal open
+    setTitle('');
+    setDescription('');
+    
+    // Small delay to prevent double submission
+    setTimeout(() => setIsSubmitting(false), 500);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-xl">Add Urgent Concern</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          
+          <div className="space-y-2">
+            <Label htmlFor="concern-title" className="text-base">Title *</Label>
+            <Input 
+              id="concern-title" 
+              value={title} 
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Enter concern title"
+              className="text-base"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="concern-description" className="text-base">Description (Optional)</Label>
+            <Textarea 
+              id="concern-description" 
+              value={description} 
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Enter description"
+              className="text-base min-h-[100px]"
+              rows={4}
+            />
+          </div>
+          
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose} className="text-base">Cancel</Button>
+            <Button type="submit" className="text-base" disabled={isSubmitting}>{isSubmitting ? 'Adding...' : 'Add Concern'}</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Edit Urgent Concern Modal
+function EditUrgentConcernModal({ 
+  open, 
+  onClose,
+  urgentConcern
+}: { 
+  open: boolean; 
+  onClose: () => void;
+  urgentConcern: UrgentConcern | null;
+}) {
+  const { updateUrgentConcern } = useScheduleStore();
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Populate form when urgent concern changes
+  useEffect(() => {
+    if (urgentConcern) {
+      queueMicrotask(() => {
+        setTitle(urgentConcern.title);
+        setDescription(urgentConcern.description || '');
+      });
+    }
+  }, [urgentConcern]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!urgentConcern) return;
+    
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    
+    setError('');
+
+    if (!title.trim()) {
+      setError('Title is required');
+      setIsSubmitting(false);
+      return;
+    }
+
+    updateUrgentConcern(urgentConcern.id, {
+      title: title.trim(),
+      description: description.trim() || undefined,
+    });
+
+    onClose();
+    setTimeout(() => setIsSubmitting(false), 500);
+  };
+
+  if (!urgentConcern) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-xl">Edit Urgent Concern</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          
+          <div className="space-y-2">
+            <Label htmlFor="edit-concern-title" className="text-base">Title *</Label>
+            <Input 
+              id="edit-concern-title" 
+              value={title} 
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Enter concern title"
+              className="text-base"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="edit-concern-description" className="text-base">Description (Optional)</Label>
+            <Textarea 
+              id="edit-concern-description" 
+              value={description} 
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Enter description"
+              className="text-base min-h-[100px]"
+              rows={4}
             />
           </div>
           
@@ -2827,11 +3861,11 @@ const getPersonnelTypeColor = (type: PersonnelStatus['type']): string => {
   switch (type) {
     case 'CTO':
     case 'FL':
-      return '#f97316'; // orange
+      return '#ef4444'; // red
     case 'WFH':
-      return '#22c55e'; // green
-    case 'TRAVEL':
       return '#3b82f6'; // blue
+    case 'TRAVEL':
+      return '#f97316'; // orange
     default:
       return '#6b7280'; // gray
   }
@@ -3310,26 +4344,36 @@ function DialogPersonnelRow({ personnel, onDelete, onEdit }: { personnel: Person
 
 // Scrolling Ticker Component
 function ScrollingTicker({ 
-  onEditTicker,
-  onDeleteTicker 
+  onSelectToEdit,
+  onSelectToDelete
 }: { 
-  onEditTicker: (ticker: TickerMessage) => void;
-  onDeleteTicker: (id: string) => void;
+  onSelectToEdit: () => void;
+  onSelectToDelete: () => void;
 }) {
   const { tickerMessages } = useScheduleStore();
   const textRef = useRef<HTMLSpanElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const spacerRef = useRef<HTMLSpanElement>(null);
   const [shouldScroll, setShouldScroll] = useState(false);
+  const [contentWidth, setContentWidth] = useState(0);
+  const [containerWidth, setContainerWidth] = useState(0);
+  const animationRef = useRef<number | null>(null);
+  const scrollPositionRef = useRef(0);
+  const lastTimeRef = useRef(0);
   
   const tickerText = tickerMessages.map(m => m.message).join("  •  ");
+  const scrollSpeed = 40; // pixels per second
 
-  // Check if text exceeds container width
+  // Check if text exceeds container width and measure widths
   useEffect(() => {
     const checkOverflow = () => {
       if (textRef.current && containerRef.current) {
         const textWidth = textRef.current.scrollWidth;
-        const containerWidth = containerRef.current.clientWidth;
-        setShouldScroll(textWidth > containerWidth);
+        const cWidth = containerRef.current.clientWidth;
+        setShouldScroll(textWidth > cWidth);
+        setContentWidth(textWidth);
+        setContainerWidth(cWidth);
       }
     };
     
@@ -3338,125 +4382,142 @@ function ScrollingTicker({
     return () => window.removeEventListener('resize', checkOverflow);
   }, [tickerText]);
 
+  // Animate ticker scroll
+  useEffect(() => {
+    if (!shouldScroll || !textRef.current || !scrollRef.current) {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
+      }
+      scrollPositionRef.current = 0;
+      if (scrollRef.current) {
+        scrollRef.current.scrollLeft = 0;
+      }
+      return;
+    }
+
+    const animate = (timestamp: number) => {
+      if (!textRef.current || !scrollRef.current || !containerRef.current) {
+        animationRef.current = requestAnimationFrame(animate);
+        return;
+      }
+
+      if (!lastTimeRef.current) {
+        lastTimeRef.current = timestamp;
+      }
+      const delta = timestamp - lastTimeRef.current;
+      lastTimeRef.current = timestamp;
+
+      // Reset point: content width + container width (spacer allows last item to fully exit)
+      // After spacer, the first item appears from the right
+      const resetPoint = contentWidth + containerWidth;
+      
+      scrollPositionRef.current += (scrollSpeed * delta) / 1000;
+      
+      // Reset when we've scrolled past content + spacer
+      if (scrollPositionRef.current >= resetPoint) {
+        scrollPositionRef.current = 0;
+      }
+      
+      scrollRef.current.scrollLeft = scrollPositionRef.current;
+      animationRef.current = requestAnimationFrame(animate);
+    };
+
+    animationRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
+      }
+    };
+  }, [shouldScroll, contentWidth, containerWidth, scrollSpeed]);
+
   // Auto-hide if no ticker entries
   if (tickerMessages.length === 0) {
     return null;
   }
 
   return (
-    <div ref={containerRef} className="w-full h-[72px] bg-muted border-t border-border overflow-hidden flex-shrink-0">
-      <div className="flex items-center justify-center h-full px-4">
-        <div 
-          className={`whitespace-nowrap ${shouldScroll ? 'animate-scroll-ticker hover:[animation-play-state:paused]' : ''} cursor-default`}
-          style={{ display: 'inline-block' }}
-        >
-          <span ref={textRef} className="inline-flex items-center gap-6 font-semibold text-2xl text-foreground px-4">
-            {shouldScroll ? (
-              <>
-                {tickerMessages.map((ticker, index) => (
-                  <TickerItem 
-                    key={`${ticker.id}-${index}`}
-                    ticker={ticker}
-                    onEdit={onEditTicker}
-                    onDelete={onDeleteTicker}
-                    showSeparator={index < tickerMessages.length - 1}
-                  />
-                ))}
-                <span className="text-muted-foreground">•</span>
-                {tickerMessages.map((ticker, index) => (
-                  <TickerItem 
-                    key={`${ticker.id}-dup-${index}`}
-                    ticker={ticker}
-                    onEdit={onEditTicker}
-                    onDelete={onDeleteTicker}
-                    showSeparator={index < tickerMessages.length - 1}
-                  />
-                ))}
-              </>
-            ) : (
-              tickerMessages.map((ticker, index) => (
+    <div ref={containerRef} className="w-full h-[48px] bg-muted border-t border-border overflow-hidden flex-shrink-0 group relative">
+      <div 
+        ref={scrollRef}
+        className="flex items-center h-full px-3 overflow-x-hidden"
+      >
+        <div className="whitespace-nowrap cursor-default flex" style={{ display: 'inline-flex' }}>
+          {/* Original content */}
+          <span ref={textRef} className="inline-flex items-center gap-4 font-semibold text-base text-foreground px-3">
+            {tickerMessages.map((ticker, index) => (
+              <TickerItem 
+                key={`${ticker.id}-${index}`}
+                ticker={ticker}
+                showSeparator={index < tickerMessages.length - 1}
+              />
+            ))}
+          </span>
+          {/* Spacer - creates gap between last item and first item */}
+          {shouldScroll && (
+            <span ref={spacerRef} style={{ width: `${containerWidth}px`, display: 'inline-block' }} />
+          )}
+          {/* Duplicate content for seamless loop after spacer */}
+          {shouldScroll && (
+            <span className="inline-flex items-center gap-4 font-semibold text-base text-foreground px-3">
+              {tickerMessages.map((ticker, index) => (
                 <TickerItem 
-                  key={`${ticker.id}-${index}`}
+                  key={`${ticker.id}-dup-${index}`}
                   ticker={ticker}
-                  onEdit={onEditTicker}
-                  onDelete={onDeleteTicker}
                   showSeparator={index < tickerMessages.length - 1}
                 />
-              ))
-            )}
-          </span>
+              ))}
+            </span>
+          )}
         </div>
+      </div>
+      
+      {/* Edit and Delete buttons - visible on hover */}
+      <div className="absolute right-2 top-1/2 -translate-y-1/2 flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-muted/90 rounded-lg p-0.5 z-10">
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="h-6 w-6"
+          onClick={onSelectToEdit}
+          title="Edit Renewing Project"
+        >
+          <Pencil className="h-3 w-3" />
+        </Button>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="h-6 w-6 text-destructive hover:text-destructive"
+          onClick={onSelectToDelete}
+          title="Delete Renewing Project"
+        >
+          <Trash2 className="h-3 w-3" />
+        </Button>
       </div>
     </div>
   );
 }
 
-// Ticker Item Component with hover controls
+// Ticker Item Component (simplified without individual edit/delete)
 function TickerItem({ 
   ticker, 
-  onEdit, 
-  onDelete,
   showSeparator 
 }: { 
   ticker: TickerMessage;
-  onEdit: (ticker: TickerMessage) => void;
-  onDelete: (id: string) => void;
   showSeparator: boolean;
 }) {
-  const content = (
-    <span className="inline-flex items-center gap-2 group relative">
+  return (
+    <span className="inline-flex items-center gap-2">
       <span className="text-foreground">{ticker.message}</span>
-      <span className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 ml-1">
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="h-6 w-6 hover:bg-background/50"
-          onClick={(e) => {
-            e.stopPropagation();
-            onEdit(ticker);
-          }}
-        >
-          <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-        </Button>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="h-6 w-6 hover:bg-background/50"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(ticker.id);
-          }}
-        >
-          <Trash2 className="h-3.5 w-3.5 text-destructive" />
-        </Button>
-      </span>
       {showSeparator && <span className="text-muted-foreground ml-2">•</span>}
     </span>
-  );
-
-  return (
-    <ContextMenu>
-      <ContextMenuTrigger asChild>
-        {content}
-      </ContextMenuTrigger>
-      <ContextMenuContent>
-        <ContextMenuItem onClick={() => onEdit(ticker)}>
-          <Pencil className="h-4 w-4 mr-2" />
-          Edit
-        </ContextMenuItem>
-        <ContextMenuSeparator />
-        <ContextMenuItem onClick={() => onDelete(ticker.id)} className="text-destructive focus:text-destructive">
-          <Trash2 className="h-4 w-4 mr-2" />
-          Delete
-        </ContextMenuItem>
-      </ContextMenuContent>
-    </ContextMenu>
   );
 }
 
 // Main Page Component
 export default function EUSTDDSchedule() {
-  const { events, personnelStatuses, settings, deleteEvent, deletePersonnelStatus, deleteProject, deleteTickerMessage, _hasHydrated, loadFromServer, startAutoSync, stopAutoSync } = useScheduleStore();
+  const { events, personnelStatuses, settings, deleteEvent, deletePersonnelStatus, deleteProject, deleteTickerMessage, deleteUrgentConcern, _hasHydrated, loadFromServer, startAutoSync, stopAutoSync } = useScheduleStore();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [modalType, setModalType] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'day' | 'week' | 'month'>('day');
@@ -3467,6 +4528,11 @@ export default function EUSTDDSchedule() {
   const [editingPersonnel, setEditingPersonnel] = useState<PersonnelStatus | null>(null);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [editingTicker, setEditingTicker] = useState<TickerMessage | null>(null);
+  const [editingUrgentConcern, setEditingUrgentConcern] = useState<UrgentConcern | null>(null);
+  
+  // Ticker selection modal state
+  const [selectTickerEditOpen, setSelectTickerEditOpen] = useState(false);
+  const [selectTickerDeleteOpen, setSelectTickerDeleteOpen] = useState(false);
   
   // Session-based PIN protection
   const [isSessionUnlocked, setIsSessionUnlocked] = useState(false);
@@ -3683,16 +4749,18 @@ export default function EUSTDDSchedule() {
           <PersonnelStatusPanel 
             onDeletePersonnel={deletePersonnelStatus} 
             onEditPersonnel={setEditingPersonnel}
-            onAddCto={() => setModalType('cto')}
-            onAddWfh={() => setModalType('wfh')}
+            onAddCtoWfh={() => setModalType('ctoWfh')}
             onAddTravel={() => setModalType('travel')}
-            onAddOther={() => setModalType('other')}
+            onAddOther={() => setModalType('otherDivision')}
           />
           
-          <ProjectRequestPanel 
+          <CombinedPanel4 
             onDeleteProject={deleteProject} 
             onEditProject={setEditingProject}
-            onDoubleClick={() => setModalType('project')}
+            onDoubleClickProject={() => setModalType('project')}
+            onDeleteUrgentConcern={deleteUrgentConcern}
+            onEditUrgentConcern={setEditingUrgentConcern}
+            onDoubleClickUrgentConcern={() => setModalType('urgentConcern')}
           />
         </main>
       );
@@ -3743,8 +4811,8 @@ export default function EUSTDDSchedule() {
       </div>
       
       <ScrollingTicker 
-        onEditTicker={setEditingTicker}
-        onDeleteTicker={deleteTickerMessage}
+        onSelectToEdit={() => setSelectTickerEditOpen(true)}
+        onSelectToDelete={() => setSelectTickerDeleteOpen(true)}
       />
 
       {/* Event Notifications */}
@@ -3798,30 +4866,28 @@ export default function EUSTDDSchedule() {
       
       <AddEventModal open={modalType === 'event'} onClose={closeModal} defaultDate={prefilledDate} />
       
-      <AddPersonnelModal 
-        open={modalType === 'cto'} 
-        onClose={closeModal} 
-        type="CTO"
+      <AddCtoWfhModal 
+        open={modalType === 'ctoWfh'} 
+        onClose={closeModal}
         defaultDate={prefilledDate}
       />
       
-      <AddPersonnelModal 
-        open={modalType === 'wfh'} 
-        onClose={closeModal} 
-        type="WFH"
-        defaultDate={prefilledDate}
-      />
-      
-      <AddPersonnelModal 
+      <AddTravelModal 
         open={modalType === 'travel'} 
         onClose={closeModal} 
-        type="TRAVEL"
         defaultDate={prefilledDate}
+      />
+      
+      <AddOtherDivisionModal 
+        open={modalType === 'otherDivision'} 
+        onClose={closeModal} 
       />
       
       <AddProjectModal open={modalType === 'project'} onClose={closeModal} />
       
       <AddTickerMessageModal open={modalType === 'ticker'} onClose={closeModal} />
+      
+      <AddUrgentConcernModal open={modalType === 'urgentConcern'} onClose={closeModal} />
       
       {/* Edit Modals */}
       <EditEventModal 
@@ -3846,6 +4912,27 @@ export default function EUSTDDSchedule() {
         open={!!editingTicker} 
         onClose={() => setEditingTicker(null)} 
         tickerMessage={editingTicker}
+      />
+      
+      <EditUrgentConcernModal 
+        open={!!editingUrgentConcern} 
+        onClose={() => setEditingUrgentConcern(null)} 
+        urgentConcern={editingUrgentConcern}
+      />
+      
+      {/* Ticker Selection Modals */}
+      <SelectTickerModal
+        open={selectTickerEditOpen}
+        onClose={() => setSelectTickerEditOpen(false)}
+        onSelect={(ticker) => setEditingTicker(ticker)}
+        mode="edit"
+      />
+      
+      <SelectTickerModal
+        open={selectTickerDeleteOpen}
+        onClose={() => setSelectTickerDeleteOpen(false)}
+        onSelect={(ticker) => deleteTickerMessage(ticker.id)}
+        mode="delete"
       />
     </div>
   );

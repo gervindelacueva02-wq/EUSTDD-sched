@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { ScheduleStore, ScheduleEvent, PersonnelStatus, Project, TickerMessage, AppSettings, TransitionStyle } from '@/types/schedule';
+import type { ScheduleStore, ScheduleEvent, PersonnelStatus, Project, TickerMessage, AppSettings, TransitionStyle, UrgentConcern } from '@/types/schedule';
 
 // Generate unique ID
 const generateId = () => {
@@ -110,6 +110,21 @@ const demoProjects: Project[] = [
   },
 ];
 
+const demoUrgentConcerns: UrgentConcern[] = [
+  {
+    id: generateId(),
+    title: 'Server Downtime',
+    description: 'Production server experiencing intermittent issues',
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: generateId(),
+    title: 'Database Migration',
+    description: 'Need to migrate legacy data to new schema',
+    createdAt: new Date().toISOString(),
+  },
+];
+
 // Debounce helper
 let saveTimeout: NodeJS.Timeout | null = null;
 let syncInterval: NodeJS.Timeout | null = null;
@@ -120,6 +135,7 @@ export const useScheduleStore = create<ScheduleStore>()((set, get) => ({
   events: demoEvents,
   personnelStatuses: demoPersonnel,
   projects: demoProjects,
+  urgentConcerns: demoUrgentConcerns,
   tickerMessages: [],
   settings: defaultSettings,
   _hasHydrated: false,
@@ -135,6 +151,7 @@ export const useScheduleStore = create<ScheduleStore>()((set, get) => ({
           events: data.events || demoEvents,
           personnelStatuses: data.personnelStatuses || demoPersonnel,
           projects: data.projects || demoProjects,
+          urgentConcerns: data.urgentConcerns || demoUrgentConcerns,
           tickerMessages: data.tickerMessages || [],
           settings: { ...defaultSettings, ...data.settings },
           _hasHydrated: true,
@@ -166,6 +183,7 @@ export const useScheduleStore = create<ScheduleStore>()((set, get) => ({
               events: data.events || [],
               personnelStatuses: data.personnelStatuses || [],
               projects: data.projects || [],
+              urgentConcerns: data.urgentConcerns || [],
               tickerMessages: data.tickerMessages || [],
               settings: { ...defaultSettings, ...data.settings },
             });
@@ -198,6 +216,7 @@ export const useScheduleStore = create<ScheduleStore>()((set, get) => ({
           events: state.events,
           personnelStatuses: state.personnelStatuses,
           projects: state.projects,
+          urgentConcerns: state.urgentConcerns,
           tickerMessages: state.tickerMessages,
           settings: state.settings,
         };
@@ -318,6 +337,35 @@ export const useScheduleStore = create<ScheduleStore>()((set, get) => ({
       projects: state.projects.map((project) =>
         project.id === id ? { ...project, number: Math.max(0, project.number - 1) } : project
       ),
+    }));
+    get().saveToServer();
+  },
+
+  // Urgent Concern actions
+  addUrgentConcern: (concernData) => {
+    const newConcern: UrgentConcern = {
+      ...concernData,
+      id: generateId(),
+      createdAt: new Date().toISOString(),
+    };
+    set((state) => ({
+      urgentConcerns: [...state.urgentConcerns, newConcern],
+    }));
+    get().saveToServer();
+  },
+
+  updateUrgentConcern: (id, concernData) => {
+    set((state) => ({
+      urgentConcerns: state.urgentConcerns.map((concern) =>
+        concern.id === id ? { ...concern, ...concernData } : concern
+      ),
+    }));
+    get().saveToServer();
+  },
+
+  deleteUrgentConcern: (id) => {
+    set((state) => ({
+      urgentConcerns: state.urgentConcerns.filter((concern) => concern.id !== id),
     }));
     get().saveToServer();
   },

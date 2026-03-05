@@ -1,6 +1,9 @@
 // Event status based on current time
 export type EventStatus = 'upcoming' | 'ongoing' | 'completed';
 
+// Event category type
+export type EventCategory = 'water' | 'construction' | 'energy' | 'disaster-mitigation' | 'human-security' | 'transport';
+
 // Transition style for overflow content
 export type TransitionStyle = 
   | 'static' 
@@ -18,6 +21,7 @@ export interface ScheduleEvent {
   timeStart: string; // HH:mm format
   timeEnd: string; // HH:mm format
   details?: string;
+  category?: EventCategory;
   createdAt: string;
 }
 
@@ -103,6 +107,11 @@ export interface ScheduleStoreActions {
   deleteProject: (id: string) => void;
   incrementProject: (id: string) => void;
   decrementProject: (id: string) => void;
+  
+  // Urgent Concern actions
+  addUrgentConcern: (concern: Omit<UrgentConcern, 'id' | 'createdAt'>) => void;
+  updateUrgentConcern: (id: string, concern: Partial<UrgentConcern>) => void;
+  deleteUrgentConcern: (id: string) => void;
   
   // Ticker Message actions
   addTickerMessage: (message: Omit<TickerMessage, 'id' | 'createdAt'>) => void;

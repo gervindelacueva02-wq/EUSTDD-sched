@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import prisma from '@/lib/db';
 
 // Helper function to safely parse JSON
 function safeJsonParse(str: string | null | undefined, fallback: unknown = null) {
@@ -14,19 +14,20 @@ function safeJsonParse(str: string | null | undefined, fallback: unknown = null)
 // GET - Fetch all schedule data
 export async function GET() {
   try {
-    let data = await db.scheduleData.findUnique({
+    let data = await prisma.scheduleData.findUnique({
       where: { id: 'main' },
     });
 
     // Create default data if not exists
     if (!data) {
-      data = await db.scheduleData.create({
+      data = await prisma.scheduleData.create({
         data: {
           id: 'main',
           events: '[]',
           personnel: '[]',
           projects: '[]',
           tickerMessages: '[]',
+          urgentConcerns: '[]',
           settings: JSON.stringify({
             theme: 'light',
             transitionStyle: 'static',
@@ -50,6 +51,7 @@ export async function GET() {
       personnelStatuses: safeJsonParse(data.personnel, []),
       projects: safeJsonParse(data.projects, []),
       tickerMessages: safeJsonParse(data.tickerMessages, []),
+      urgentConcerns: safeJsonParse(data.urgentConcerns, []),
       settings: safeJsonParse(data.settings, {}),
     });
   } catch (error) {
@@ -62,15 +64,16 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { events, personnelStatuses, projects, tickerMessages, settings } = body;
+    const { events, personnelStatuses, projects, tickerMessages, urgentConcerns, settings } = body;
 
-    const data = await db.scheduleData.upsert({
+    const data = await prisma.scheduleData.upsert({
       where: { id: 'main' },
       update: {
         events: JSON.stringify(events || []),
         personnel: JSON.stringify(personnelStatuses || []),
         projects: JSON.stringify(projects || []),
         tickerMessages: JSON.stringify(tickerMessages || []),
+        urgentConcerns: JSON.stringify(urgentConcerns || []),
         settings: JSON.stringify(settings || {}),
       },
       create: {
@@ -79,6 +82,7 @@ export async function POST(request: Request) {
         personnel: JSON.stringify(personnelStatuses || []),
         projects: JSON.stringify(projects || []),
         tickerMessages: JSON.stringify(tickerMessages || []),
+        urgentConcerns: JSON.stringify(urgentConcerns || []),
         settings: JSON.stringify(settings || {}),
       },
     });
@@ -88,6 +92,7 @@ export async function POST(request: Request) {
       personnelStatuses: safeJsonParse(data.personnel, []),
       projects: safeJsonParse(data.projects, []),
       tickerMessages: safeJsonParse(data.tickerMessages, []),
+      urgentConcerns: safeJsonParse(data.urgentConcerns, []),
       settings: safeJsonParse(data.settings, {}),
     });
   } catch (error) {
