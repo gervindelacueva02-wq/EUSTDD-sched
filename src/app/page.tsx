@@ -840,13 +840,7 @@ function Header({
 
   return (
     <>
-      {/* DOST Gradient Accent Bar */}
-      <div className="w-full h-1 bg-gradient-to-r from-[#0033A0] via-[#C8102E] to-[#0033A0]" />
-      
       <header className="w-full bg-card border-b border-border relative overflow-hidden">
-        {/* Subtle background pattern */}
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-50/50 via-transparent to-red-50/50 dark:from-blue-950/20 dark:to-red-950/20 pointer-events-none" />
-        
         <div className="relative px-2 sm:px-4 py-2">
           {/* Mobile Layout */}
           <div className="flex flex-col gap-1 sm:hidden">
@@ -861,10 +855,13 @@ function Header({
                   className="rounded"
                 />
                 <div>
-                  <h1 className="text-base font-bold tracking-wide text-foreground leading-tight">
+                  <h1 className="text-base font-black tracking-wide leading-tight
+                    bg-gradient-to-r from-[#0033A0] to-[#0047D2]
+                    dark:from-blue-400 dark:to-blue-300
+                    bg-clip-text text-transparent">
                     EUSTDD SCHEDULE
                   </h1>
-                  <p className="text-[10px] text-muted-foreground">Department of Science & Technology</p>
+                  <p className="text-[10px] text-muted-foreground font-medium">Department of Science & Technology</p>
                 </div>
               </div>
               <div className="flex items-center gap-1">
@@ -932,10 +929,15 @@ function Header({
                 className="rounded-lg shadow-sm"
               />
               <div>
-                <h1 className="text-xl lg:text-2xl font-bold tracking-wide text-foreground leading-tight">
+                <h1 className="text-xl lg:text-2xl font-black tracking-wide leading-tight
+                  bg-gradient-to-r from-[#0033A0] via-[#0047D2] to-[#0033A0] 
+                  dark:from-blue-400 dark:via-blue-300 dark:to-blue-400
+                  bg-clip-text text-transparent drop-shadow-sm">
                   EUSTDD SCHEDULE
                 </h1>
-                <p className="text-xs text-muted-foreground hidden sm:block">Energy and Utilities Systems Technology Development Division</p>
+                <p className="text-xs text-muted-foreground hidden sm:block font-medium tracking-wide">
+                  Energy and Utilities Systems Technology Development Division
+                </p>
               </div>
             </div>
             
@@ -1016,39 +1018,52 @@ function Header({
 
 // Status indicator with icons and animations
 function StatusIndicator({ status, size = 'md', className = '' }: { status: EventStatus; size?: 'sm' | 'md' | 'lg'; className?: string }) {
+  const { settings } = useScheduleStore();
+  const colors = settings.statusColors;
+  
   const sizeClasses = {
-    sm: 'w-4 h-4',
-    md: 'w-5 h-5',
-    lg: 'w-6 h-6',
+    sm: 'w-5 h-5',
+    md: 'w-6 h-6',
+    lg: 'w-7 h-7',
   };
   
   const iconSizeClasses = {
-    sm: 'h-2.5 w-2.5',
-    md: 'h-3 w-3',
+    sm: 'h-3 w-3',
+    md: 'h-3.5 w-3.5',
     lg: 'h-4 w-4',
   };
 
   if (status === 'completed') {
     return (
-      <span className={`inline-flex items-center justify-center rounded-full bg-green-500/20 ${sizeClasses[size]} ${className}`}>
-        <Check className={`${iconSizeClasses[size]} text-green-600`} />
+      <span 
+        className={`inline-flex items-center justify-center rounded-full shadow-md ${sizeClasses[size]} ${className}`}
+        style={{ backgroundColor: colors.completed, boxShadow: `0 4px 6px -1px ${colors.completed}40` }}
+      >
+        <Check className={`${iconSizeClasses[size]} text-white`} />
       </span>
     );
   }
   
   if (status === 'ongoing') {
     return (
-      <span className={`inline-flex items-center justify-center rounded-full bg-green-500/20 ${sizeClasses[size]} ${className} relative`}>
-        <span className="absolute inset-0 rounded-full bg-green-500 animate-ping opacity-75" />
-        <span className={`${iconSizeClasses[size]} rounded-full bg-green-500 relative z-10`} />
+      <span 
+        className={`inline-flex items-center justify-center rounded-full ${sizeClasses[size]} ${className} relative shadow-lg`}
+        style={{ backgroundColor: colors.ongoing, boxShadow: `0 4px 6px -1px ${colors.ongoing}40` }}
+      >
+        <span className="absolute inset-0 rounded-full animate-ping opacity-80" style={{ backgroundColor: colors.ongoing }} />
+        <span className="absolute inset-0 rounded-full animate-pulse opacity-50" style={{ backgroundColor: colors.ongoing }} />
+        <span className={`${iconSizeClasses[size]} rounded-full bg-white relative z-10 shadow-sm`} />
       </span>
     );
   }
   
   // upcoming
   return (
-    <span className={`inline-flex items-center justify-center rounded-full bg-blue-500/20 ${sizeClasses[size]} ${className}`}>
-      <Clock className={`${iconSizeClasses[size]} text-blue-600`} />
+    <span 
+      className={`inline-flex items-center justify-center rounded-full shadow-md ${sizeClasses[size]} ${className}`}
+      style={{ backgroundColor: colors.upcoming, boxShadow: `0 4px 6px -1px ${colors.upcoming}40` }}
+    >
+      <Clock className={`${iconSizeClasses[size]} text-white`} />
     </span>
   );
 }
@@ -1092,7 +1107,14 @@ function EventRow({ event, onDelete, onEdit, transitionStyle, transitionSpeed, s
       animate="animate"
       exit="exit"
       layout
-      className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 py-2 px-2 sm:px-3 hover:bg-muted/50 rounded group transition-colors overflow-hidden"
+      whileHover={{ scale: 1.01, y: -1 }}
+      transition={{ duration: 0.2 }}
+      className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 py-2.5 px-3 sm:px-4 rounded-xl group transition-all duration-300 overflow-hidden relative
+        bg-gradient-to-r from-white/80 to-white/40 dark:from-gray-900/80 dark:to-gray-900/40
+        border border-gray-200/50 dark:border-gray-700/50
+        hover:shadow-lg hover:shadow-gray-200/20 dark:hover:shadow-gray-900/30
+        hover:border-gray-300/50 dark:hover:border-gray-600/50
+        backdrop-blur-sm"
     >
       {/* Mobile Layout */}
       <div className="flex items-start gap-2 flex-1 min-w-0 sm:hidden">
@@ -1342,21 +1364,35 @@ function SchedulePanel({
   
   return (
     <div 
-      className="bg-card border border-border rounded-lg h-full flex flex-col overflow-hidden cursor-pointer"
+      className="h-full flex flex-col overflow-hidden cursor-pointer rounded-2xl
+        bg-gradient-to-br from-white/90 via-white/70 to-white/50 
+        dark:from-gray-900/90 dark:via-gray-900/70 dark:to-gray-900/50
+        border border-white/50 dark:border-gray-700/50
+        shadow-xl shadow-gray-200/20 dark:shadow-gray-900/30
+        backdrop-blur-md transition-all duration-300
+        hover:shadow-2xl hover:shadow-gray-300/30 dark:hover:shadow-gray-800/40"
       onDoubleClick={onDoubleClick}
     >
-      <div className="px-2 py-1 border-b border-border bg-muted/30 flex items-center justify-between">
+      {/* Header with gradient accent */}
+      <div className="px-3 py-2 border-b border-gray-200/30 dark:border-gray-700/30 
+        bg-gradient-to-r from-gray-50/80 to-transparent dark:from-gray-800/50 dark:to-transparent
+        flex items-center justify-between rounded-t-2xl">
         <div className="flex items-center gap-2">
-          <h2 className="text-base sm:text-lg lg:text-[24px] font-bold text-foreground tracking-wide">{title}</h2>
-          <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-semibold rounded-full bg-primary/10 text-primary">
+          <h2 className="text-base sm:text-lg lg:text-xl font-bold text-foreground tracking-wide
+            bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 
+            bg-clip-text text-transparent drop-shadow-sm">{title}</h2>
+          <span className="inline-flex items-center justify-center min-w-[24px] h-6 px-2 
+            text-xs font-bold rounded-full 
+            bg-gradient-to-r from-blue-500 to-cyan-500 text-white
+            shadow-md shadow-blue-500/20">
             {events.length}
           </span>
         </div>
-        <p className="text-[10px] sm:text-xs text-muted-foreground hidden sm:block">{date}</p>
+        <p className="text-[10px] sm:text-xs text-muted-foreground hidden sm:block font-medium">{date}</p>
       </div>
       <div 
         ref={containerRef}
-        className="flex-1 overflow-y-auto p-1 sm:p-1.5 scrollbar-hide"
+        className="flex-1 overflow-y-auto p-2 sm:p-3 scrollbar-hide space-y-2"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {events.length === 0 ? (
@@ -1460,8 +1496,14 @@ function PersonnelStatusPanel({
   const ctoLeaveWfhPersonnel = [...ctoflPersonnel, ...wfhPersonnel];
 
   return (
-    <div className="bg-card border border-border rounded-lg h-full flex flex-col overflow-hidden">
-      <div className="flex-1 flex flex-col sm:flex-row divide-y sm:divide-y-0 sm:divide-x divide-border overflow-hidden">
+    <div className="h-full flex flex-col overflow-hidden rounded-2xl
+      bg-gradient-to-br from-white/90 via-white/70 to-white/50 
+      dark:from-gray-900/90 dark:via-gray-900/70 dark:to-gray-900/50
+      border border-white/50 dark:border-gray-700/50
+      shadow-xl shadow-gray-200/20 dark:shadow-gray-900/30
+      backdrop-blur-md transition-all duration-300
+      hover:shadow-2xl hover:shadow-gray-300/30 dark:hover:shadow-gray-800/40">
+      <div className="flex-1 flex flex-col sm:flex-row divide-y sm:divide-y-0 sm:divide-x divide-gray-200/30 dark:divide-gray-700/30 overflow-hidden">
         {/* Combined CTO/LEAVE & WFH Column - 30% */}
         <div className="sm:w-[30%] flex-shrink-0 overflow-hidden">
           <PersonnelColumn 
@@ -1579,17 +1621,24 @@ function PersonnelColumn({
       className="flex flex-col overflow-hidden h-full cursor-pointer"
       onDoubleClick={onDoubleClick}
     >
-      <div className="px-2 py-2 border-b border-border bg-muted/30 flex-shrink-0 flex items-center justify-center" style={{ height: '52px' }}>
+      <div className="px-2 py-2 border-b border-gray-200/30 dark:border-gray-700/30 
+        bg-gradient-to-r from-gray-50/80 to-transparent dark:from-gray-800/50 dark:to-transparent
+        flex-shrink-0 flex items-center justify-center" style={{ height: '52px' }}>
         <div className="flex items-center justify-center gap-2 w-full">
-          <h3 className="text-xs sm:text-sm lg:text-base font-bold text-foreground tracking-wide text-center leading-tight line-clamp-2 flex-1">{title}</h3>
-          <span className="inline-flex items-center justify-center min-w-[18px] h-5 px-1.5 text-xs font-semibold rounded-full bg-primary/10 text-primary flex-shrink-0">
+          <h3 className="text-xs sm:text-sm lg:text-base font-bold text-foreground tracking-wide text-center leading-tight line-clamp-2 flex-1
+            bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 
+            bg-clip-text text-transparent">{title}</h3>
+          <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 
+            text-xs font-bold rounded-full 
+            bg-gradient-to-r from-slate-500 to-gray-600 text-white
+            shadow-md shadow-slate-500/20 flex-shrink-0">
             {personnel.length}
           </span>
         </div>
       </div>
       <div 
         ref={containerRef}
-        className="flex-1 overflow-y-auto p-1 scrollbar-hide min-h-0"
+        className="flex-1 overflow-y-auto p-1.5 scrollbar-hide min-h-0 space-y-1.5"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {personnel.length === 0 ? (
@@ -1669,16 +1718,23 @@ function PersonnelItemCompact({
   const content = (
     <motion.div 
       layout
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      className="flex items-start justify-between gap-2 py-1 px-2 hover:bg-muted/50 rounded group transition-colors"
+      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -10, scale: 0.95 }}
+      whileHover={{ scale: 1.02, y: -1 }}
+      transition={{ duration: 0.2 }}
+      className="flex items-start justify-between gap-2 py-2 px-2.5 rounded-lg group transition-all duration-300
+        bg-gradient-to-r from-white/80 to-white/40 dark:from-gray-800/80 dark:to-gray-800/40
+        border border-gray-200/30 dark:border-gray-700/30
+        hover:shadow-md hover:shadow-gray-200/20 dark:hover:shadow-gray-900/30
+        hover:border-gray-300/50 dark:hover:border-gray-600/50
+        backdrop-blur-sm"
     >
       <div className="flex-1 min-w-0 flex items-start gap-2">
         <div className="flex flex-col min-w-0 flex-1">
-          <span className="font-medium text-sm sm:text-base lg:text-[18px] text-foreground line-clamp-2 break-words">{item.name}</span>
+          <span className="font-semibold text-sm sm:text-base text-foreground line-clamp-2 break-words">{item.name}</span>
           {item.type !== 'OTHER' && (
-            <span className="text-[10px] sm:text-xs lg:text-[12px] text-muted-foreground">
+            <span className="text-[10px] sm:text-xs text-muted-foreground font-medium">
               {formatDateRange(item.dateStart, item.dateEnd)}
             </span>
           )}
@@ -1687,7 +1743,7 @@ function PersonnelItemCompact({
           )}
         </div>
         {typeBadge && (
-          <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium flex-shrink-0 mt-0.5 ${typeBadge.className}`}>
+          <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold flex-shrink-0 mt-0.5 shadow-sm ${typeBadge.className}`}>
             {typeBadge.label}
           </span>
         )}
@@ -1697,7 +1753,7 @@ function PersonnelItemCompact({
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-gray-200/50 dark:hover:bg-gray-700/50"
             onClick={onEdit}
           >
             <Pencil className="h-3 w-3 text-muted-foreground" />
@@ -1707,7 +1763,7 @@ function PersonnelItemCompact({
           <Button 
             variant="ghost" 
             size="icon" 
-            className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-100 dark:hover:bg-red-900/30"
             onClick={onDelete}
           >
             <Trash2 className="h-3 w-3 text-destructive" />
@@ -1983,10 +2039,17 @@ function UrgentConcernColumn({
       className="flex flex-col overflow-hidden h-full cursor-pointer"
       onDoubleClick={onDoubleClick}
     >
-      <div className="px-2 py-1 border-b border-border bg-muted/30 flex-shrink-0">
+      <div className="px-2 py-1.5 border-b border-gray-200/30 dark:border-gray-700/30 
+        bg-gradient-to-r from-red-50/80 to-transparent dark:from-red-900/20 dark:to-transparent
+        flex-shrink-0">
         <div className="flex items-center justify-center gap-2">
-          <h3 className="text-base sm:text-lg lg:text-[20px] font-bold text-foreground tracking-wide uppercase">URGENT CONCERNS</h3>
-          <span className="inline-flex items-center justify-center min-w-[18px] h-5 px-1.5 text-xs font-semibold rounded-full bg-primary/10 text-primary">
+          <h3 className="text-base sm:text-lg lg:text-xl font-bold tracking-wide uppercase
+            bg-gradient-to-r from-red-600 to-orange-500 
+            bg-clip-text text-transparent">URGENT CONCERNS</h3>
+          <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 
+            text-xs font-bold rounded-full 
+            bg-gradient-to-r from-red-500 to-orange-500 text-white
+            shadow-md shadow-red-500/20">
             {concerns.length}
           </span>
         </div>
@@ -2110,17 +2173,24 @@ function ProjectColumn({
       className="flex flex-col overflow-hidden h-full cursor-pointer"
       onDoubleClick={onDoubleClick}
     >
-      <div className="px-2 py-1 border-b border-border bg-muted/30 flex-shrink-0">
+      <div className="px-2 py-1.5 border-b border-gray-200/30 dark:border-gray-700/30 
+        bg-gradient-to-r from-green-50/80 to-transparent dark:from-green-900/20 dark:to-transparent
+        flex-shrink-0">
         <div className="flex items-center justify-center gap-2">
-          <h3 className="text-base sm:text-lg lg:text-[20px] font-bold text-foreground tracking-wide uppercase">ONGOING PROJECT REQUESTS</h3>
-          <span className="inline-flex items-center justify-center min-w-[18px] h-5 px-1.5 text-xs font-semibold rounded-full bg-primary/10 text-primary">
+          <h3 className="text-base sm:text-lg lg:text-xl font-bold tracking-wide uppercase
+            bg-gradient-to-r from-green-600 to-emerald-500 
+            bg-clip-text text-transparent">ONGOING PROJECT REQUESTS</h3>
+          <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 
+            text-xs font-bold rounded-full 
+            bg-gradient-to-r from-green-500 to-emerald-500 text-white
+            shadow-md shadow-green-500/20">
             {projects.length}
           </span>
         </div>
       </div>
       <div 
         ref={containerRef}
-        className="flex-1 overflow-y-auto p-1 scrollbar-hide min-h-0"
+        className="flex-1 overflow-y-auto p-1.5 scrollbar-hide min-h-0 space-y-1.5"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {projects.length === 0 ? (
@@ -2197,8 +2267,14 @@ function CombinedPanel4({
   const { projects, urgentConcerns, settings } = useScheduleStore();
   
   return (
-    <div className="bg-card border border-border rounded-lg h-full flex flex-col overflow-hidden">
-      <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-border overflow-hidden">
+    <div className="h-full flex flex-col overflow-hidden rounded-2xl
+      bg-gradient-to-br from-white/90 via-white/70 to-white/50 
+      dark:from-gray-900/90 dark:via-gray-900/70 dark:to-gray-900/50
+      border border-white/50 dark:border-gray-700/50
+      shadow-xl shadow-gray-200/20 dark:shadow-gray-900/30
+      backdrop-blur-md transition-all duration-300
+      hover:shadow-2xl hover:shadow-gray-300/30 dark:hover:shadow-gray-800/40">
+      <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-gray-200/30 dark:divide-gray-700/30 overflow-hidden">
         {/* Left Column: Urgent Concerns */}
         <UrgentConcernColumn 
           concerns={urgentConcerns}
@@ -4686,14 +4762,14 @@ function ScrollingTicker({
   }
 
   return (
-    <div ref={containerRef} className="w-full h-[48px] bg-muted border-t border-border overflow-hidden flex-shrink-0 group relative">
+    <div ref={containerRef} className="w-full h-[52px] bg-card border-t border-border overflow-hidden flex-shrink-0 group relative">
       <div 
         ref={scrollRef}
         className="flex items-center h-full px-3 overflow-x-hidden"
       >
         <div className="whitespace-nowrap cursor-default flex" style={{ display: 'inline-flex' }}>
           {/* Original content */}
-          <span ref={textRef} className="inline-flex items-center gap-4 font-semibold text-base text-foreground px-3">
+          <span ref={textRef} className="inline-flex items-center gap-4 font-semibold text-lg text-foreground px-3">
             {tickerMessages.map((ticker, index) => (
               <TickerItem 
                 key={`${ticker.id}-${index}`}
@@ -4708,7 +4784,7 @@ function ScrollingTicker({
           )}
           {/* Duplicate content for seamless loop after spacer */}
           {shouldScroll && (
-            <span className="inline-flex items-center gap-4 font-semibold text-base text-foreground px-3">
+            <span className="inline-flex items-center gap-4 font-semibold text-lg text-foreground px-3">
               {tickerMessages.map((ticker, index) => (
                 <TickerItem 
                   key={`${ticker.id}-dup-${index}`}
@@ -4722,7 +4798,7 @@ function ScrollingTicker({
       </div>
       
       {/* Edit and Delete buttons - visible on hover */}
-      <div className="absolute right-2 top-1/2 -translate-y-1/2 flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-muted/90 rounded-lg p-0.5 z-10">
+      <div className="absolute right-2 top-1/2 -translate-y-1/2 flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-card/90 rounded-lg p-0.5 z-10 border border-border/50">
         <Button 
           variant="ghost" 
           size="icon" 
@@ -4756,8 +4832,8 @@ function TickerItem({
 }) {
   return (
     <span className="inline-flex items-center gap-2 px-1">
-      <span className="text-2xl font-bold text-foreground">{ticker.message}</span>
-      {showSeparator && <span className="text-muted-foreground ml-2">•</span>}
+      <span className="text-lg font-semibold text-foreground">{ticker.message}</span>
+      {showSeparator && <span className="text-muted-foreground ml-2 text-lg">•</span>}
     </span>
   );
 }
