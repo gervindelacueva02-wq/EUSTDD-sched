@@ -13,8 +13,20 @@ import {
   Trash2,
   X,
   BellRing,
-  Pencil
+  Pencil,
+  Check,
+  Droplets,
+  Building2,
+  Zap,
+  ShieldAlert,
+  Users,
+  Car,
+  MoreHorizontal,
+  CloudSun,
+  Thermometer,
+  MapPin
 } from 'lucide-react';
+import Image from 'next/image';
 import { useScheduleStore } from '@/store/schedule-store';
 import type { ScheduleEvent, PersonnelStatus, Project, TickerMessage, EventStatus, TransitionStyle, UrgentConcern, EventCategory } from '@/types/schedule';
 import { Button } from '@/components/ui/button';
@@ -51,6 +63,12 @@ import {
 } from '@/components/ui/context-menu';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { ChevronDown } from 'lucide-react';
 
 // Utility function to format time to 12-hour format
 const formatTime12Hour = (time: string): string => {
@@ -80,14 +98,15 @@ const getEventStatus = (event: ScheduleEvent): EventStatus => {
   }
 };
 
-// Event category configuration
-const EVENT_CATEGORIES: { value: EventCategory; label: string; color: string }[] = [
-  { value: 'water', label: 'Water', color: '#3b82f6' }, // blue
-  { value: 'construction', label: 'Construction', color: '#6b7280' }, // gray
-  { value: 'energy', label: 'Energy', color: '#eab308' }, // yellow
-  { value: 'disaster-mitigation', label: 'Disaster\nMitigation', color: '#a855f7' }, // purple
-  { value: 'human-security', label: 'Human\nSecurity', color: '#ef4444' }, // red
-  { value: 'transport', label: 'Transport', color: '#f97316' }, // orange
+// Event category configuration with icons
+const EVENT_CATEGORIES: { value: EventCategory; label: string; color: string; icon: React.ReactNode }[] = [
+  { value: 'water', label: 'Water', color: '#3b82f6', icon: <Droplets className="h-3 w-3" /> }, // blue
+  { value: 'construction', label: 'Construction', color: '#6b7280', icon: <Building2 className="h-3 w-3" /> }, // gray
+  { value: 'energy', label: 'Energy', color: '#eab308', icon: <Zap className="h-3 w-3" /> }, // yellow
+  { value: 'disaster-mitigation', label: 'Disaster\nMitigation', color: '#a855f7', icon: <ShieldAlert className="h-3 w-3" /> }, // purple
+  { value: 'human-security', label: 'Human\nSecurity', color: '#22c55e', icon: <Users className="h-3 w-3" /> }, // green
+  { value: 'transport', label: 'Transport', color: '#f97316', icon: <Car className="h-3 w-3" /> }, // orange
+  { value: 'others', label: 'Others', color: '#ef4444', icon: <MoreHorizontal className="h-3 w-3" /> }, // red
 ];
 
 // Get sector color
@@ -102,6 +121,32 @@ const getSectorLabel = (category?: EventCategory): string => {
   if (!category) return '';
   const cat = EVENT_CATEGORIES.find(c => c.value === category);
   return cat ? cat.label : '';
+};
+
+// Get sector icon
+const getSectorIcon = (category?: EventCategory): React.ReactNode => {
+  if (!category) return null;
+  const cat = EVENT_CATEGORIES.find(c => c.value === category);
+  return cat ? cat.icon : null;
+};
+
+// Get primary category for event (for border color)
+const getPrimaryCategory = (event: ScheduleEvent): EventCategory | undefined => {
+  const categories = getEventCategories(event);
+  return categories.length > 0 ? categories[0] : undefined;
+};
+
+// Get all categories from an event (handles both old and new format)
+const getEventCategories = (event: ScheduleEvent): EventCategory[] => {
+  // If new categories array exists and has items, use it
+  if (event.categories && event.categories.length > 0) {
+    return event.categories;
+  }
+  // Fall back to old single category for backward compatibility
+  if (event.category) {
+    return [event.category];
+  }
+  return [];
 };
 
 // Check if a date is within a range
@@ -610,6 +655,38 @@ function PinDialog({
   );
 }
 
+// Weather Widget Component
+function WeatherWidget() {
+  // Calculate weather based on current time - initialized immediately
+  const getInitialWeather = () => {
+    const hour = new Date().getHours();
+    const conditions = ['Sunny', 'Partly Cloudy', 'Cloudy', 'Light Rain'];
+    const baseTemp = 28;
+    
+    // Warmer in afternoon, cooler at night
+    const tempAdjust = hour >= 12 && hour <= 16 ? 4 : hour >= 18 || hour <= 6 ? -3 : 0;
+    
+    return {
+      temp: baseTemp + tempAdjust + Math.floor(Math.random() * 3),
+      condition: conditions[Math.floor(Math.random() * conditions.length)],
+      location: 'Manila, PH'
+    };
+  };
+  
+  const [weather] = useState(getInitialWeather);
+
+  return (
+    <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 border border-blue-100 dark:border-blue-800">
+      <CloudSun className="h-4 w-4 text-amber-500" />
+      <div className="flex items-center gap-1.5 text-xs">
+        <span className="font-semibold text-foreground">{weather.temp}°C</span>
+        <span className="text-muted-foreground hidden sm:inline">•</span>
+        <span className="text-muted-foreground hidden sm:inline">{weather.condition}</span>
+      </div>
+    </div>
+  );
+}
+
 // Header Component
 function Header({ 
   onOpenSettings, 
@@ -681,129 +758,163 @@ function Header({
 
   return (
     <>
-      <header className="w-full bg-card border-b border-border px-1.5 sm:px-2 py-1 relative">
-        {/* Mobile Layout */}
-        <div className="flex flex-col gap-0.5 sm:hidden">
-          {/* Title Row */}
-          <div className="flex items-center justify-between">
-            <h1 className="text-lg font-bold tracking-wide text-foreground">
-              EUSTDD SCHEDULE
-            </h1>
-            <div className="flex items-center gap-1">
-              {/* View Mode Dropdown - Mobile */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon" className="h-7 w-7">
-                    <CalendarIcon className="h-3.5 w-3.5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-28">
-                  <DropdownMenuItem onClick={() => onViewModeChange('day')}>Day</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onViewModeChange('week')}>Week</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onViewModeChange('month')}>Month</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              
-              {/* Add Entry Button - Mobile */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-7 w-7">
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-44">
-                  <DropdownMenuItem onClick={() => handleProtectedAction(() => onAddEntry('event'), 'add', 'event')}>Add Event</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleProtectedAction(() => onAddEntry('ctoWfh'), 'add', 'ctoWfh')}>Add CTO/Leave & WFH</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleProtectedAction(() => onAddEntry('travel'), 'add', 'travel')}>Add In Travel</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleProtectedAction(() => onAddEntry('otherDivision'), 'add', 'otherDivision')}>Add Other Division Request</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleProtectedAction(() => onAddEntry('urgentConcern'), 'add', 'urgentConcern')}>Add Urgent Concern</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleProtectedAction(() => onAddEntry('project'), 'add', 'project')}>Add Project</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleProtectedAction(() => onAddEntry('ticker'), 'add', 'ticker')}>Add Renewing Project</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              
-              {/* Settings Button - Mobile */}
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleProtectedAction(onOpenSettings, 'settings')}>
-                <Settings className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-          
-          {/* Date & Time Row - Mobile */}
-          <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <CalendarIcon className="h-3 w-3" />
-              {format(currentTime, 'MMM d, yyyy')}
-            </span>
-            <span className="flex items-center gap-1">
-              <Clock className="h-3 w-3" />
-              <span className="font-mono tabular-nums">{format(currentTime, 'hh:mm:ss aa')}</span>
-            </span>
-          </div>
-        </div>
+      {/* DOST Gradient Accent Bar */}
+      <div className="w-full h-1 bg-gradient-to-r from-[#0033A0] via-[#C8102E] to-[#0033A0]" />
+      
+      <header className="w-full bg-card border-b border-border relative overflow-hidden">
+        {/* Subtle background pattern */}
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-50/50 via-transparent to-red-50/50 dark:from-blue-950/20 dark:to-red-950/20 pointer-events-none" />
         
-        {/* Desktop/Tablet Layout */}
-        <div className="hidden sm:flex items-center justify-between">
-          {/* Title - Left Side */}
-          <div className="flex-1 min-w-0">
-            <h1 className="text-xl lg:text-2xl font-bold tracking-wide text-foreground">
-              EUSTDD SCHEDULE
-            </h1>
-          </div>
-          
-          {/* Date & Time - Center */}
-          <div className="flex-1 flex justify-center">
-            <div className="flex flex-wrap items-center justify-center gap-2 lg:gap-3 text-sm lg:text-base text-muted-foreground">
-              <span className="flex items-center gap-1.5">
-                <CalendarIcon className="h-4 w-4 lg:h-5 lg:w-5" />
-                {format(currentTime, 'MMMM d, yyyy')}
+        <div className="relative px-2 sm:px-4 py-2">
+          {/* Mobile Layout */}
+          <div className="flex flex-col gap-1 sm:hidden">
+            {/* Title Row */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Image 
+                  src="/pcieerd-icon.png" 
+                  alt="PCIEERD Logo" 
+                  width={32}
+                  height={32}
+                  className="rounded"
+                />
+                <div>
+                  <h1 className="text-base font-bold tracking-wide text-foreground leading-tight">
+                    EUSTDD SCHEDULE
+                  </h1>
+                  <p className="text-[10px] text-muted-foreground">Department of Science & Technology</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1">
+                {/* View Mode Dropdown - Mobile */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="icon" className="h-7 w-7">
+                      <CalendarIcon className="h-3.5 w-3.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-28">
+                    <DropdownMenuItem onClick={() => onViewModeChange('day')}>Day</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onViewModeChange('week')}>Week</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onViewModeChange('month')}>Month</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                
+                {/* Add Entry Button - Mobile */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-7 w-7">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-44">
+                    <DropdownMenuItem onClick={() => handleProtectedAction(() => onAddEntry('event'), 'add', 'event')}>Add Event</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleProtectedAction(() => onAddEntry('ctoWfh'), 'add', 'ctoWfh')}>Add CTO/Leave & WFH</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleProtectedAction(() => onAddEntry('travel'), 'add', 'travel')}>Add In Travel</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleProtectedAction(() => onAddEntry('otherDivision'), 'add', 'otherDivision')}>Add Other Division Request</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleProtectedAction(() => onAddEntry('urgentConcern'), 'add', 'urgentConcern')}>Add Urgent Concern</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleProtectedAction(() => onAddEntry('project'), 'add', 'project')}>Add Project</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleProtectedAction(() => onAddEntry('ticker'), 'add', 'ticker')}>Add Renewing Project</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                
+                {/* Settings Button - Mobile */}
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleProtectedAction(onOpenSettings, 'settings')}>
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            
+            {/* Date & Time Row - Mobile */}
+            <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <CalendarIcon className="h-3 w-3" />
+                {format(currentTime, 'MMM d, yyyy')}
               </span>
-              <span className="flex items-center gap-1.5">
-                <Clock className="h-4 w-4 lg:h-5 lg:w-5" />
+              <span className="flex items-center gap-1">
+                <Clock className="h-3 w-3" />
                 <span className="font-mono tabular-nums">{format(currentTime, 'hh:mm:ss aa')}</span>
               </span>
             </div>
           </div>
           
-          {/* Right Side Controls */}
-          <div className="flex-1 flex justify-end items-center gap-1 lg:gap-2">
-            {/* View Mode Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="h-7 px-2 lg:px-3 gap-1.5">
-                  <CalendarIcon className="h-3.5 w-3.5" />
-                  <span className="text-xs hidden lg:inline">{getViewModeLabel()}</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-28">
-                <DropdownMenuItem className="text-xs py-1.5" onClick={() => onViewModeChange('day')}>Day</DropdownMenuItem>
-                <DropdownMenuItem className="text-xs py-1.5" onClick={() => onViewModeChange('week')}>Week</DropdownMenuItem>
-                <DropdownMenuItem className="text-xs py-1.5" onClick={() => onViewModeChange('month')}>Month</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          {/* Desktop/Tablet Layout */}
+          <div className="hidden sm:flex items-center justify-between gap-4 relative">
+            {/* Logo & Title - Left Side */}
+            <div className="flex items-center gap-3 flex-shrink-0 z-10">
+              <Image 
+                src="/pcieerd-icon.png" 
+                alt="PCIEERD Logo" 
+                width={48}
+                height={48}
+                className="rounded-lg shadow-sm"
+              />
+              <div>
+                <h1 className="text-xl lg:text-2xl font-bold tracking-wide text-foreground leading-tight">
+                  EUSTDD SCHEDULE
+                </h1>
+                <p className="text-xs text-muted-foreground hidden sm:block">Energy and Utilities Systems Technology Development Division</p>
+              </div>
+            </div>
             
-            {/* Add Entry Button */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 lg:h-9 lg:w-9">
-                  <Plus className="h-4 w-4 lg:h-5 lg:w-5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem className="text-xs py-1.5" onClick={() => handleProtectedAction(() => onAddEntry('event'), 'add', 'event')}>Add Event</DropdownMenuItem>
-                <DropdownMenuItem className="text-xs py-1.5" onClick={() => handleProtectedAction(() => onAddEntry('ctoWfh'), 'add', 'ctoWfh')}>Add CTO/Leave & WFH</DropdownMenuItem>
-                <DropdownMenuItem className="text-xs py-1.5" onClick={() => handleProtectedAction(() => onAddEntry('travel'), 'add', 'travel')}>Add In Travel</DropdownMenuItem>
-                <DropdownMenuItem className="text-xs py-1.5" onClick={() => handleProtectedAction(() => onAddEntry('otherDivision'), 'add', 'otherDivision')}>Add Other Division Request</DropdownMenuItem>
-                <DropdownMenuItem className="text-xs py-1.5" onClick={() => handleProtectedAction(() => onAddEntry('urgentConcern'), 'add', 'urgentConcern')}>Add Urgent Concern</DropdownMenuItem>
-                <DropdownMenuItem className="text-xs py-1.5" onClick={() => handleProtectedAction(() => onAddEntry('project'), 'add', 'project')}>Add Project</DropdownMenuItem>
-                <DropdownMenuItem className="text-xs py-1.5" onClick={() => handleProtectedAction(() => onAddEntry('ticker'), 'add', 'ticker')}>Add Renewing Project</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {/* Date & Time & Weather - Center (absolute positioned for true center) */}
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center gap-0.5">
+              {/* Time */}
+              <div className="flex items-center gap-1 text-sm lg:text-base text-muted-foreground">
+                <Clock className="h-4 w-4 text-red-600" />
+                <span className="font-mono tabular-nums font-semibold text-foreground">{format(currentTime, 'hh:mm:ss aa')}</span>
+              </div>
+              {/* Date and Weather side by side */}
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  <CalendarIcon className="h-3 w-3 text-blue-600" />
+                  <span className="font-medium text-foreground">{format(currentTime, 'EEE, MMM d, yyyy')}</span>
+                </div>
+                <WeatherWidget />
+              </div>
+            </div>
             
-            {/* Settings Button */}
-            <Button variant="ghost" size="icon" onClick={() => handleProtectedAction(onOpenSettings, 'settings')} className="h-8 w-8 lg:h-9 lg:w-9">
-              <Settings className="h-4 w-4 lg:h-5 lg:w-5" />
-            </Button>
+            {/* Right Side Controls */}
+            <div className="flex items-center gap-2 flex-shrink-0 z-10 ml-auto">
+              {/* View Mode Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="h-8 px-3 gap-1.5 shadow-sm">
+                    <CalendarIcon className="h-4 w-4" />
+                    <span className="text-sm">{getViewModeLabel()}</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-28">
+                  <DropdownMenuItem className="text-sm py-2" onClick={() => onViewModeChange('day')}>Day</DropdownMenuItem>
+                  <DropdownMenuItem className="text-sm py-2" onClick={() => onViewModeChange('week')}>Week</DropdownMenuItem>
+                  <DropdownMenuItem className="text-sm py-2" onClick={() => onViewModeChange('month')}>Month</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              
+              {/* Add Entry Button */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button className="h-8 px-3 gap-1.5 shadow-sm bg-gradient-to-r from-[#0033A0] to-[#0047D2] hover:from-[#002880] hover:to-[#0033A0]">
+                    <Plus className="h-4 w-4" />
+                    <span className="text-sm">Add</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem className="text-sm py-2" onClick={() => handleProtectedAction(() => onAddEntry('event'), 'add', 'event')}>Add Event</DropdownMenuItem>
+                  <DropdownMenuItem className="text-sm py-2" onClick={() => handleProtectedAction(() => onAddEntry('ctoWfh'), 'add', 'ctoWfh')}>Add CTO/Leave & WFH</DropdownMenuItem>
+                  <DropdownMenuItem className="text-sm py-2" onClick={() => handleProtectedAction(() => onAddEntry('travel'), 'add', 'travel')}>Add In Travel</DropdownMenuItem>
+                  <DropdownMenuItem className="text-sm py-2" onClick={() => handleProtectedAction(() => onAddEntry('otherDivision'), 'add', 'otherDivision')}>Add Other Division Request</DropdownMenuItem>
+                  <DropdownMenuItem className="text-sm py-2" onClick={() => handleProtectedAction(() => onAddEntry('urgentConcern'), 'add', 'urgentConcern')}>Add Urgent Concern</DropdownMenuItem>
+                  <DropdownMenuItem className="text-sm py-2" onClick={() => handleProtectedAction(() => onAddEntry('project'), 'add', 'project')}>Add Project</DropdownMenuItem>
+                  <DropdownMenuItem className="text-sm py-2" onClick={() => handleProtectedAction(() => onAddEntry('ticker'), 'add', 'ticker')}>Add Renewing Project</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              
+              {/* Settings Button */}
+              <Button variant="outline" size="icon" onClick={() => handleProtectedAction(onOpenSettings, 'settings')} className="h-8 w-8 shadow-sm">
+                <Settings className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -821,7 +932,46 @@ function Header({
   );
 }
 
-// Status indicator dot
+// Status indicator with icons and animations
+function StatusIndicator({ status, size = 'md', className = '' }: { status: EventStatus; size?: 'sm' | 'md' | 'lg'; className?: string }) {
+  const sizeClasses = {
+    sm: 'w-4 h-4',
+    md: 'w-5 h-5',
+    lg: 'w-6 h-6',
+  };
+  
+  const iconSizeClasses = {
+    sm: 'h-2.5 w-2.5',
+    md: 'h-3 w-3',
+    lg: 'h-4 w-4',
+  };
+
+  if (status === 'completed') {
+    return (
+      <span className={`inline-flex items-center justify-center rounded-full bg-green-500/20 ${sizeClasses[size]} ${className}`}>
+        <Check className={`${iconSizeClasses[size]} text-green-600`} />
+      </span>
+    );
+  }
+  
+  if (status === 'ongoing') {
+    return (
+      <span className={`inline-flex items-center justify-center rounded-full bg-green-500/20 ${sizeClasses[size]} ${className} relative`}>
+        <span className="absolute inset-0 rounded-full bg-green-500 animate-ping opacity-75" />
+        <span className={`${iconSizeClasses[size]} rounded-full bg-green-500 relative z-10`} />
+      </span>
+    );
+  }
+  
+  // upcoming
+  return (
+    <span className={`inline-flex items-center justify-center rounded-full bg-blue-500/20 ${sizeClasses[size]} ${className}`}>
+      <Clock className={`${iconSizeClasses[size]} text-blue-600`} />
+    </span>
+  );
+}
+
+// Legacy StatusDot for backward compatibility
 function StatusDot({ color, size = 'md', className = '' }: { color: string; size?: 'sm' | 'md' | 'lg'; className?: string }) {
   const sizeClasses = {
     sm: 'w-2.5 h-2.5',
@@ -848,9 +998,7 @@ function EventRow({ event, onDelete, onEdit, transitionStyle, transitionSpeed, s
 }) {
   const { settings } = useScheduleStore();
   const status = getEventStatus(event);
-  const statusColor = settings.statusColors[status];
-  const sectorColor = getSectorColor(event.category);
-  const sectorLabel = getSectorLabel(event.category);
+  const eventCategories = getEventCategories(event);
   const isAllDay = event.timeStart === '00:00' && event.timeEnd === '23:59';
   
   const variants = getTransitionVariants(transitionStyle, transitionSpeed);
@@ -866,18 +1014,21 @@ function EventRow({ event, onDelete, onEdit, transitionStyle, transitionSpeed, s
     >
       {/* Mobile Layout */}
       <div className="flex items-start gap-2 flex-1 min-w-0 sm:hidden">
-        <div className="flex-1 min-w-0 w-full overflow-hidden">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0 overflow-hidden">
-              {event.category && (
-                <span 
-                  className="text-[10px] px-2 py-0.5 rounded-full text-white font-medium flex-shrink-0"
-                  style={{ backgroundColor: sectorColor }}
-                >
-                  {sectorLabel}
-                </span>
-              )}
-              <span className="font-medium text-sm text-foreground truncate">{event.title}</span>
+        <div className="flex-1 min-w-0 w-full">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap mb-1">
+                {eventCategories.length > 0 && eventCategories.map((cat) => (
+                  <span 
+                    key={cat}
+                    className="text-[10px] px-2 py-0.5 rounded-full text-white font-medium flex-shrink-0 min-w-[70px] text-center"
+                    style={{ backgroundColor: getSectorColor(cat) }}
+                  >
+                    {getSectorLabel(cat)}
+                  </span>
+                ))}
+              </div>
+              <span className="font-medium text-sm text-foreground break-words">{event.title}</span>
             </div>
             <div className="flex flex-col gap-0.5 flex-shrink-0">
               {onEdit && (
@@ -903,10 +1054,8 @@ function EventRow({ event, onDelete, onEdit, transitionStyle, transitionSpeed, s
             </div>
           </div>
           <div className="flex items-center gap-2 text-muted-foreground text-xs mt-1">
-            <div className="flex items-center gap-1.5">
-              <StatusDot color={statusColor} size="sm" />
-              {showDate && <span>{format(parseISO(event.dateStarted), 'MMM d')}</span>}
-            </div>
+            <StatusIndicator status={status} size="sm" />
+            {showDate && <span>{format(parseISO(event.dateStarted), 'MMM d')}</span>}
             <div className="flex flex-col items-start">
               {isAllDay ? (
                 <span>All Day</span>
@@ -919,32 +1068,33 @@ function EventRow({ event, onDelete, onEdit, transitionStyle, transitionSpeed, s
             </div>
           </div>
           {event.details && (
-            <div className="text-muted-foreground text-xs mt-1 truncate">{event.details}</div>
+            <div className="text-muted-foreground text-xs mt-1 break-words">{event.details}</div>
           )}
         </div>
       </div>
       
       {/* Desktop Layout: Sector | Title | Status+Time | Details */}
       {/* Sector Column - 10% */}
-      <div className="hidden sm:flex items-center justify-center flex-[0_0_10%] overflow-hidden">
-        {event.category ? (
+      <div className="hidden sm:flex items-center justify-center flex-[0_0_10%] overflow-hidden flex-wrap gap-0.5">
+        {eventCategories.length > 0 && eventCategories.map((cat) => (
           <span 
-            className="text-[10px] px-2 py-0.5 rounded-full text-white font-medium whitespace-pre-line text-center leading-tight"
-            style={{ backgroundColor: sectorColor }}
+            key={cat}
+            className="text-[10px] px-1 py-0.5 rounded-full text-white font-medium whitespace-pre-line text-center leading-tight min-w-[70px]"
+            style={{ backgroundColor: getSectorColor(cat) }}
           >
-            {sectorLabel}
+            {getSectorLabel(cat)}
           </span>
-        ) : null}
+        ))}
       </div>
       
       {/* Title Column - 45% */}
-      <div className="hidden sm:flex items-center flex-[0_0_45%] min-w-0 overflow-hidden">
-        <span className="font-medium text-base lg:text-[18px] text-foreground line-clamp-2 break-words">{event.title}</span>
+      <div className="hidden sm:flex items-center flex-[0_0_45%] min-w-0">
+        <span className="font-medium text-base lg:text-lg text-foreground break-words">{event.title}</span>
       </div>
       
-      {/* Time Column with Status Dot - 10% - Right Aligned, Vertical Time */}
+      {/* Time Column with Status Indicator - 10% - Right Aligned, Vertical Time */}
       <div className="hidden sm:flex items-center gap-1.5 flex-[0_0_10%] justify-end overflow-hidden">
-        <StatusDot color={statusColor} size="sm" className="flex-shrink-0" />
+        <StatusIndicator status={status} size="sm" />
         <div className="flex flex-col items-end text-right min-w-0">
           {showDate && (
             <span className="text-muted-foreground text-[10px] whitespace-nowrap">
@@ -969,7 +1119,7 @@ function EventRow({ event, onDelete, onEdit, transitionStyle, transitionSpeed, s
       {/* Details Column - 35% */}
       <div className="hidden sm:flex items-center gap-2 flex-[0_0_35%] justify-end min-w-0 pr-2">
         {event.details && (
-          <div className="text-muted-foreground text-xs lg:text-[14px] text-right line-clamp-2 flex-1 min-w-0 break-words">
+          <div className="text-muted-foreground text-xs lg:text-sm text-right break-words flex-1 min-w-0">
             {event.details}
           </div>
         )}
@@ -2001,7 +2151,7 @@ function EditEventModal({
 }) {
   const { updateEvent } = useScheduleStore();
   const [title, setTitle] = useState('');
-  const [category, setCategory] = useState<EventCategory | ''>('');
+  const [categories, setCategories] = useState<EventCategory[]>([]);
   const [dateStarted, setDateStarted] = useState('');
   const [timeStart, setTimeStart] = useState('');
   const [timeEnd, setTimeEnd] = useState('');
@@ -2015,7 +2165,9 @@ function EditEventModal({
     if (event) {
       queueMicrotask(() => {
         setTitle(event.title);
-        setCategory(event.category || '');
+        // Load categories from new format or fall back to old single category
+        const eventCats = getEventCategories(event);
+        setCategories(eventCats);
         setDateStarted(event.dateStarted);
         setTimeStart(event.timeStart);
         setTimeEnd(event.timeEnd);
@@ -2024,6 +2176,15 @@ function EditEventModal({
       });
     }
   }, [event]);
+
+  // Toggle category selection
+  const toggleCategory = (cat: EventCategory) => {
+    setCategories(prev => 
+      prev.includes(cat) 
+        ? prev.filter(c => c !== cat)
+        : [...prev, cat]
+    );
+  };
 
   const handleAllDayChange = (checked: boolean) => {
     setIsAllDay(checked);
@@ -2060,7 +2221,7 @@ function EditEventModal({
       timeStart,
       timeEnd,
       details: details.trim() || undefined,
-      category: category || undefined,
+      categories: categories.length > 0 ? categories : undefined,
     });
 
     onClose();
@@ -2090,25 +2251,49 @@ function EditEventModal({
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="edit-event-category" className="text-base">Sector</Label>
-            <Select value={category} onValueChange={(value) => setCategory(value as EventCategory | '')}>
-              <SelectTrigger id="edit-event-category" className="text-base">
-                <SelectValue placeholder="Select sector" />
-              </SelectTrigger>
-              <SelectContent>
-                {EVENT_CATEGORIES.map((cat) => (
-                  <SelectItem key={cat.value} value={cat.value}>
-                    <div className="flex items-center gap-2">
-                      <span 
-                        className="w-3 h-3 rounded-full" 
-                        style={{ backgroundColor: cat.color }}
+            <Label className="text-base">Sector</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  role="combobox"
+                  className="w-full justify-between text-base font-normal"
+                >
+                  {categories.length > 0 
+                    ? categories.map(c => getSectorLabel(c)).join(', ')
+                    : 'Select sector(s)'
+                  }
+                  <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[300px] p-2" align="start">
+                <div className="space-y-1">
+                  {EVENT_CATEGORIES.map((cat) => (
+                    <div 
+                      key={cat.value} 
+                      className="flex items-center space-x-2 p-2 rounded hover:bg-muted cursor-pointer"
+                      onClick={() => toggleCategory(cat.value)}
+                    >
+                      <Checkbox 
+                        id={`edit-cat-${cat.value}`}
+                        checked={categories.includes(cat.value)}
+                        onCheckedChange={() => toggleCategory(cat.value)}
                       />
-                      {cat.label}
+                      <label 
+                        htmlFor={`edit-cat-${cat.value}`}
+                        className="flex items-center gap-2 text-sm cursor-pointer flex-1 select-none"
+                      >
+                        <span 
+                          className="w-3 h-3 rounded-full flex-shrink-0" 
+                          style={{ backgroundColor: cat.color }}
+                        />
+                        <span className="whitespace-pre-line">{cat.label}</span>
+                      </label>
                     </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
           
           <div className="space-y-2">
@@ -2189,7 +2374,7 @@ function AddEventModal({
 }) {
   const { addEvent } = useScheduleStore();
   const [title, setTitle] = useState('');
-  const [category, setCategory] = useState<EventCategory | ''>('');
+  const [categories, setCategories] = useState<EventCategory[]>([]);
   const [dateStarted, setDateStarted] = useState(() => defaultDate || format(new Date(), 'yyyy-MM-dd'));
   const [timeStart, setTimeStart] = useState('09:00');
   const [timeEnd, setTimeEnd] = useState('10:00');
@@ -2203,7 +2388,7 @@ function AddEventModal({
     if (open) {
       queueMicrotask(() => {
         setTitle('');
-        setCategory('');
+        setCategories([]);
         setDateStarted(defaultDate || format(new Date(), 'yyyy-MM-dd'));
         setTimeStart('09:00');
         setTimeEnd('10:00');
@@ -2221,6 +2406,15 @@ function AddEventModal({
       setTimeStart('00:00');
       setTimeEnd('23:59');
     }
+  };
+
+  // Toggle category selection
+  const toggleCategory = (cat: EventCategory) => {
+    setCategories(prev => 
+      prev.includes(cat) 
+        ? prev.filter(c => c !== cat)
+        : [...prev, cat]
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -2250,12 +2444,12 @@ function AddEventModal({
       timeStart,
       timeEnd,
       details: details.trim() || undefined,
-      category: category || undefined,
+      categories: categories.length > 0 ? categories : undefined,
     });
 
     // Reset form but keep modal open - preserve the date
     setTitle('');
-    setCategory('');
+    setCategories([]);
     // Keep the current date instead of resetting to today
     setTimeStart('09:00');
     setTimeEnd('10:00');
@@ -2287,25 +2481,49 @@ function AddEventModal({
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="event-category" className="text-base">Sector</Label>
-            <Select value={category} onValueChange={(value) => setCategory(value as EventCategory | '')}>
-              <SelectTrigger id="event-category" className="text-base">
-                <SelectValue placeholder="Select sector" />
-              </SelectTrigger>
-              <SelectContent>
-                {EVENT_CATEGORIES.map((cat) => (
-                  <SelectItem key={cat.value} value={cat.value}>
-                    <div className="flex items-center gap-2">
-                      <span 
-                        className="w-3 h-3 rounded-full" 
-                        style={{ backgroundColor: cat.color }}
+            <Label className="text-base">Sector</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  role="combobox"
+                  className="w-full justify-between text-base font-normal"
+                >
+                  {categories.length > 0 
+                    ? categories.map(c => getSectorLabel(c)).join(', ')
+                    : 'Select sector(s)'
+                  }
+                  <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[300px] p-2" align="start">
+                <div className="space-y-1">
+                  {EVENT_CATEGORIES.map((cat) => (
+                    <div 
+                      key={cat.value} 
+                      className="flex items-center space-x-2 p-2 rounded hover:bg-muted cursor-pointer"
+                      onClick={() => toggleCategory(cat.value)}
+                    >
+                      <Checkbox 
+                        id={`add-cat-${cat.value}`}
+                        checked={categories.includes(cat.value)}
+                        onCheckedChange={() => toggleCategory(cat.value)}
                       />
-                      {cat.label}
+                      <label 
+                        htmlFor={`add-cat-${cat.value}`}
+                        className="flex items-center gap-2 text-sm cursor-pointer flex-1 select-none"
+                      >
+                        <span 
+                          className="w-3 h-3 rounded-full flex-shrink-0" 
+                          style={{ backgroundColor: cat.color }}
+                        />
+                        <span className="whitespace-pre-line">{cat.label}</span>
+                      </label>
                     </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
           
           <div className="space-y-2">
@@ -3252,8 +3470,8 @@ function EditPersonnelModal({
               <div className="space-y-2">
                 <Label htmlFor="edit-ctoWfh-type" className="text-base">Request Type *</Label>
                 <Select 
-                  value={personnelType === 'CTO' || personnelType === 'FL' ? 'CTO' : personnelType} 
-                  onValueChange={(value: 'CTO' | 'WFH') => setPersonnelType(value)}
+                  value={personnelType} 
+                  onValueChange={(value: 'CTO' | 'WFH' | 'TRAVEL' | 'OTHER') => setPersonnelType(value)}
                 >
                   <SelectTrigger className="text-base">
                     <SelectValue placeholder="Select request type" />
@@ -3261,6 +3479,8 @@ function EditPersonnelModal({
                   <SelectContent>
                     <SelectItem value="CTO" className="text-base">CTO/Leave</SelectItem>
                     <SelectItem value="WFH" className="text-base">WFH</SelectItem>
+                    <SelectItem value="TRAVEL" className="text-base">Travel</SelectItem>
+                    <SelectItem value="OTHER" className="text-base">Other</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

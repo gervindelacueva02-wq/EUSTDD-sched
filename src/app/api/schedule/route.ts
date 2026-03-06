@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/db';
+import { prisma } from '@/lib/db';
 
 // Helper function to safely parse JSON
 function safeJsonParse(str: string | null | undefined, fallback: unknown = null) {

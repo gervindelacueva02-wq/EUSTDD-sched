@@ -2,7 +2,7 @@
 export type EventStatus = 'upcoming' | 'ongoing' | 'completed';
 
 // Event category type
-export type EventCategory = 'water' | 'construction' | 'energy' | 'disaster-mitigation' | 'human-security' | 'transport';
+export type EventCategory = 'water' | 'construction' | 'energy' | 'disaster-mitigation' | 'human-security' | 'transport' | 'others';
 
 // Transition style for overflow content
 export type TransitionStyle = 
@@ -21,7 +21,8 @@ export interface ScheduleEvent {
   timeStart: string; // HH:mm format
   timeEnd: string; // HH:mm format
   details?: string;
-  category?: EventCategory;
+  category?: EventCategory; // Keep for backward compatibility
+  categories?: EventCategory[]; // New array for multiple sectors
   createdAt: string;
 }
 
