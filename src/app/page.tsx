@@ -24,7 +24,16 @@ import {
   MoreHorizontal,
   CloudSun,
   Thermometer,
-  MapPin
+  MapPin,
+  Sun,
+  Moon,
+  Cloud,
+  CloudRain,
+  CloudFog,
+  CloudLightning,
+  CloudSnow,
+  Wind,
+  Umbrella
 } from 'lucide-react';
 import Image from 'next/image';
 import { useScheduleStore } from '@/store/schedule-store';
@@ -656,31 +665,104 @@ function PinDialog({
 }
 
 // Weather Widget Component
+interface WeatherData {
+  temp: number;
+  condition: string;
+  location: string;
+  humidity: number;
+  windSpeed: number;
+}
+
 function WeatherWidget() {
-  // Calculate weather based on current time - initialized immediately
-  const getInitialWeather = () => {
-    const hour = new Date().getHours();
-    const conditions = ['Sunny', 'Partly Cloudy', 'Cloudy', 'Light Rain'];
-    const baseTemp = 28;
-    
-    // Warmer in afternoon, cooler at night
-    const tempAdjust = hour >= 12 && hour <= 16 ? 4 : hour >= 18 || hour <= 6 ? -3 : 0;
-    
-    return {
-      temp: baseTemp + tempAdjust + Math.floor(Math.random() * 3),
-      condition: conditions[Math.floor(Math.random() * conditions.length)],
-      location: 'Manila, PH'
+  const [weather, setWeather] = useState<WeatherData>({
+    temp: 28,
+    condition: 'Loading...',
+    location: 'Manila, PH',
+    humidity: 0,
+    windSpeed: 0
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchWeather = async () => {
+      try {
+        // You can change lat/lon to your specific location
+        // Manila: lat=14.5995, lon=120.9842
+        const response = await fetch('/api/weather?lat=14.5995&lon=120.9842&location=Manila, PH');
+        const data = await response.json();
+        setWeather(data);
+      } catch (error) {
+        console.error('Failed to fetch weather:', error);
+      } finally {
+        setLoading(false);
+      }
     };
+
+    fetchWeather();
+    
+    // Refresh weather every 5 minutes
+    const interval = setInterval(fetchWeather, 5 * 60 * 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  // Get weather icon based on condition - Google style
+  const getWeatherIcon = () => {
+    const condition = weather.condition.toLowerCase();
+    
+    // Clear / Sunny
+    if (condition.includes('clear') || condition === 'sunny') {
+      return <Sun className="h-5 w-5 text-yellow-500" />;
+    }
+    
+    // Mostly Sunny
+    if (condition.includes('mostly sunny')) {
+      return <CloudSun className="h-5 w-5 text-yellow-400" />;
+    }
+    
+    // Partly Cloudy
+    if (condition.includes('partly cloudy')) {
+      return <CloudSun className="h-5 w-5 text-gray-400" />;
+    }
+    
+    // Cloudy / Overcast
+    if (condition.includes('cloudy') || condition.includes('overcast')) {
+      return <Cloud className="h-5 w-5 text-gray-500" />;
+    }
+    
+    // Fog
+    if (condition.includes('fog')) {
+      return <CloudFog className="h-5 w-5 text-gray-400" />;
+    }
+    
+    // Rain / Showers / Drizzle
+    if (condition.includes('rain') || condition.includes('shower') || condition.includes('drizzle')) {
+      return <CloudRain className="h-5 w-5 text-blue-500" />;
+    }
+    
+    // Thunderstorm
+    if (condition.includes('thunder') || condition.includes('storm')) {
+      return <CloudLightning className="h-5 w-5 text-yellow-600" />;
+    }
+    
+    // Snow
+    if (condition.includes('snow')) {
+      return <CloudSnow className="h-5 w-5 text-blue-300" />;
+    }
+    
+    // Default
+    return <Sun className="h-5 w-5 text-yellow-500" />;
   };
-  
-  const [weather] = useState(getInitialWeather);
 
   return (
-    <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 border border-blue-100 dark:border-blue-800">
-      <CloudSun className="h-4 w-4 text-amber-500" />
+    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 border border-blue-100 dark:border-blue-800">
+      {loading ? (
+        <div className="h-5 w-5 animate-pulse bg-muted rounded-full" />
+      ) : (
+        getWeatherIcon()
+      )}
       <div className="flex items-center gap-1.5 text-xs">
-        <span className="font-semibold text-foreground">{weather.temp}°C</span>
-        <span className="text-muted-foreground hidden sm:inline">•</span>
+        <span className="font-bold text-foreground">{weather.temp}°</span>
         <span className="text-muted-foreground hidden sm:inline">{weather.condition}</span>
       </div>
     </div>
