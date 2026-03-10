@@ -1017,17 +1017,19 @@ function Header({
 }
 
 // Status indicator with icons and animations
-function StatusIndicator({ status, size = 'md', className = '' }: { status: EventStatus; size?: 'sm' | 'md' | 'lg'; className?: string }) {
+function StatusIndicator({ status, size = 'md', className = '' }: { status: EventStatus; size?: 'xs' | 'sm' | 'md' | 'lg'; className?: string }) {
   const { settings } = useScheduleStore();
   const colors = settings.statusColors;
   
   const sizeClasses = {
+    xs: 'w-4 h-4',
     sm: 'w-5 h-5',
     md: 'w-6 h-6',
     lg: 'w-7 h-7',
   };
   
   const iconSizeClasses = {
+    xs: 'h-2.5 w-2.5',
     sm: 'h-3 w-3',
     md: 'h-3.5 w-3.5',
     lg: 'h-4 w-4',
@@ -1110,9 +1112,9 @@ function EventRow({ event, onDelete, onEdit, transitionStyle, transitionSpeed, s
       whileHover={{ scale: 1.01, y: -1 }}
       transition={{ duration: 0.2 }}
       className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 py-2.5 px-3 sm:px-4 rounded-xl group transition-all duration-300 overflow-hidden relative
-        bg-gradient-to-r from-white/80 to-white/40 dark:from-gray-900/80 dark:to-gray-900/40
-        border border-gray-200/50 dark:border-gray-700/50
-        hover:shadow-lg hover:shadow-gray-200/20 dark:hover:shadow-gray-900/30
+        bg-gradient-to-r from-gray-50/80 to-gray-100/40 dark:from-gray-900/80 dark:to-gray-900/40
+        border border-gray-200/40 dark:border-gray-700/50
+        hover:shadow-lg hover:shadow-gray-200/10 dark:hover:shadow-gray-900/30
         hover:border-gray-300/50 dark:hover:border-gray-600/50
         backdrop-blur-sm"
     >
@@ -1196,9 +1198,9 @@ function EventRow({ event, onDelete, onEdit, transitionStyle, transitionSpeed, s
         <span className="font-medium text-base lg:text-lg text-foreground break-words">{event.title}</span>
       </div>
       
-      {/* Time Column with Status Indicator - 10% - Right Aligned, Vertical Time */}
-      <div className="hidden sm:flex items-center gap-1.5 flex-[0_0_10%] justify-end overflow-hidden">
-        <StatusIndicator status={status} size="sm" />
+      {/* Time Column with Status Indicator - 11% - Right Aligned, Vertical Time */}
+      <div className="hidden sm:flex items-center gap-1.5 flex-[0_0_11%] justify-end overflow-hidden">
+        <StatusIndicator status={status} size="xs" />
         <div className="flex flex-col items-end text-right min-w-0">
           {showDate && (
             <span className="text-muted-foreground text-[10px] whitespace-nowrap">
@@ -1220,8 +1222,8 @@ function EventRow({ event, onDelete, onEdit, transitionStyle, transitionSpeed, s
         </div>
       </div>
       
-      {/* Details Column - 35% */}
-      <div className="hidden sm:flex items-center gap-2 flex-[0_0_35%] justify-end min-w-0 pr-2">
+      {/* Details Column - 34% */}
+      <div className="hidden sm:flex items-center gap-2 flex-[0_0_34%] justify-end min-w-0 pr-2">
         {event.details && (
           <div className="text-muted-foreground text-xs lg:text-sm text-right break-words flex-1 min-w-0">
             {event.details}
@@ -1365,12 +1367,12 @@ function SchedulePanel({
   return (
     <div 
       className="h-full flex flex-col overflow-hidden cursor-pointer rounded-2xl
-        bg-gradient-to-br from-white/90 via-white/70 to-white/50 
+        bg-gradient-to-br from-gray-100/80 via-gray-50/60 to-gray-100/40 
         dark:from-gray-900/90 dark:via-gray-900/70 dark:to-gray-900/50
-        border border-white/50 dark:border-gray-700/50
-        shadow-xl shadow-gray-200/20 dark:shadow-gray-900/30
+        border border-gray-200/60 dark:border-gray-700/50
+        shadow-xl shadow-gray-200/10 dark:shadow-gray-900/30
         backdrop-blur-md transition-all duration-300
-        hover:shadow-2xl hover:shadow-gray-300/30 dark:hover:shadow-gray-800/40"
+        hover:shadow-2xl hover:shadow-gray-300/20 dark:hover:shadow-gray-800/40"
       onDoubleClick={onDoubleClick}
     >
       {/* Header with gradient accent */}
@@ -1497,10 +1499,10 @@ function PersonnelStatusPanel({
 
   return (
     <div className="h-full flex flex-col overflow-hidden rounded-2xl
-      bg-gradient-to-br from-white/90 via-white/70 to-white/50 
+      bg-gradient-to-br from-gray-100/80 via-gray-50/60 to-gray-100/40 
       dark:from-gray-900/90 dark:via-gray-900/70 dark:to-gray-900/50
-      border border-white/50 dark:border-gray-700/50
-      shadow-xl shadow-gray-200/20 dark:shadow-gray-900/30
+      border border-gray-200/60 dark:border-gray-700/50
+      shadow-xl shadow-gray-200/10 dark:shadow-gray-900/30
       backdrop-blur-md transition-all duration-300
       hover:shadow-2xl hover:shadow-gray-300/30 dark:hover:shadow-gray-800/40">
       <div className="flex-1 flex flex-col sm:flex-row divide-y sm:divide-y-0 sm:divide-x divide-gray-200/30 dark:divide-gray-700/30 overflow-hidden">
@@ -2268,10 +2270,10 @@ function CombinedPanel4({
   
   return (
     <div className="h-full flex flex-col overflow-hidden rounded-2xl
-      bg-gradient-to-br from-white/90 via-white/70 to-white/50 
+      bg-gradient-to-br from-gray-100/80 via-gray-50/60 to-gray-100/40 
       dark:from-gray-900/90 dark:via-gray-900/70 dark:to-gray-900/50
-      border border-white/50 dark:border-gray-700/50
-      shadow-xl shadow-gray-200/20 dark:shadow-gray-900/30
+      border border-gray-200/60 dark:border-gray-700/50
+      shadow-xl shadow-gray-200/10 dark:shadow-gray-900/30
       backdrop-blur-md transition-all duration-300
       hover:shadow-2xl hover:shadow-gray-300/30 dark:hover:shadow-gray-800/40">
       <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-gray-200/30 dark:divide-gray-700/30 overflow-hidden">
