@@ -4762,63 +4762,70 @@ function ScrollingTicker({
   }
 
   return (
-    <div ref={containerRef} className="w-full h-[52px] bg-card border-t border-border overflow-hidden flex-shrink-0 group relative">
-      <div 
-        ref={scrollRef}
-        className="flex items-center h-full px-3 overflow-x-hidden"
-      >
-        <div className="whitespace-nowrap cursor-default flex" style={{ display: 'inline-flex' }}>
-          {/* Original content */}
-          <span ref={textRef} className="inline-flex items-center gap-4 font-semibold text-lg text-foreground px-3">
-            {tickerMessages.map((ticker, index) => (
-              <TickerItem 
-                key={`${ticker.id}-${index}`}
-                ticker={ticker}
-                showSeparator={index < tickerMessages.length - 1}
-              />
-            ))}
-          </span>
-          {/* Spacer - creates gap between last item and first item */}
-          {shouldScroll && (
-            <span ref={spacerRef} style={{ width: `${containerWidth}px`, display: 'inline-block' }} />
-          )}
-          {/* Duplicate content for seamless loop after spacer */}
-          {shouldScroll && (
-            <span className="inline-flex items-center gap-4 font-semibold text-lg text-foreground px-3">
+    <>
+      {/* Header Title - Above the ticker container */}
+      <span className="text-sm font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider px-3">
+        Target Renewal Date
+      </span>
+      
+      <div ref={containerRef} className="w-full h-[52px] bg-card border-t border-b border-border overflow-hidden flex-shrink-0 group relative">
+        <div 
+          ref={scrollRef}
+          className="flex items-center h-full px-3 overflow-x-hidden"
+        >
+          <div className="whitespace-nowrap cursor-default flex" style={{ display: 'inline-flex' }}>
+            {/* Original content */}
+            <span ref={textRef} className="inline-flex items-center gap-4 font-semibold text-xl text-foreground px-3">
               {tickerMessages.map((ticker, index) => (
                 <TickerItem 
-                  key={`${ticker.id}-dup-${index}`}
+                  key={`${ticker.id}-${index}`}
                   ticker={ticker}
                   showSeparator={index < tickerMessages.length - 1}
                 />
               ))}
             </span>
-          )}
+            {/* Spacer - creates gap between last item and first item */}
+            {shouldScroll && (
+              <span ref={spacerRef} style={{ width: `${containerWidth}px`, display: 'inline-block' }} />
+            )}
+            {/* Duplicate content for seamless loop after spacer */}
+            {shouldScroll && (
+              <span className="inline-flex items-center gap-4 font-semibold text-xl text-foreground px-3">
+                {tickerMessages.map((ticker, index) => (
+                  <TickerItem 
+                    key={`${ticker.id}-dup-${index}`}
+                    ticker={ticker}
+                    showSeparator={index < tickerMessages.length - 1}
+                  />
+                ))}
+              </span>
+            )}
+          </div>
+        </div>
+      
+        {/* Edit and Delete buttons - visible on hover */}
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-card/90 rounded-lg p-0.5 z-10 border border-border/50">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-6 w-6"
+            onClick={onSelectToEdit}
+            title="Edit Renewing Project"
+          >
+            <Pencil className="h-3 w-3" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-6 w-6 text-destructive hover:text-destructive"
+            onClick={onSelectToDelete}
+            title="Delete Renewing Project"
+          >
+            <Trash2 className="h-3 w-3" />
+          </Button>
         </div>
       </div>
-      
-      {/* Edit and Delete buttons - visible on hover */}
-      <div className="absolute right-2 top-1/2 -translate-y-1/2 flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity bg-card/90 rounded-lg p-0.5 z-10 border border-border/50">
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="h-6 w-6"
-          onClick={onSelectToEdit}
-          title="Edit Renewing Project"
-        >
-          <Pencil className="h-3 w-3" />
-        </Button>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="h-6 w-6 text-destructive hover:text-destructive"
-          onClick={onSelectToDelete}
-          title="Delete Renewing Project"
-        >
-          <Trash2 className="h-3 w-3" />
-        </Button>
-      </div>
-    </div>
+    </>
   );
 }
 
@@ -4832,8 +4839,8 @@ function TickerItem({
 }) {
   return (
     <span className="inline-flex items-center gap-2 px-1">
-      <span className="text-lg font-semibold text-foreground">{ticker.message}</span>
-      {showSeparator && <span className="text-muted-foreground ml-2 text-lg">•</span>}
+      <span className="text-xl font-semibold text-foreground">{ticker.message}</span>
+      {showSeparator && <span className="text-muted-foreground ml-2 text-xl">•</span>}
     </span>
   );
 }
