@@ -1375,14 +1375,18 @@ function SchedulePanel({
         hover:shadow-2xl hover:shadow-gray-300/20 dark:hover:shadow-gray-800/40"
       onDoubleClick={onDoubleClick}
     >
-      {/* Header with gradient accent */}
-      <div className="px-3 py-2 border-b border-gray-200/30 dark:border-gray-700/30 
-        bg-gradient-to-r from-gray-50/80 to-transparent dark:from-gray-800/50 dark:to-transparent
-        flex items-center justify-between rounded-t-2xl">
+      {/* Header with distinct styling */}
+      <div className="px-3 py-2.5 
+        bg-gradient-to-r from-slate-200/90 via-slate-100/70 to-slate-50/50 
+        dark:from-slate-800/80 dark:via-slate-800/60 dark:to-slate-900/40
+        border-b-2 border-slate-300/60 dark:border-slate-600/50
+        flex items-center justify-between rounded-t-2xl
+        shadow-sm relative overflow-hidden">
+        {/* Subtle accent line at top */}
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-400 opacity-60" />
         <div className="flex items-center gap-2">
-          <h2 className="text-base sm:text-lg lg:text-xl font-bold text-foreground tracking-wide
-            bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 
-            bg-clip-text text-transparent drop-shadow-sm">{title}</h2>
+          <h2 className="text-base sm:text-lg lg:text-xl font-bold tracking-wide
+            text-slate-800 dark:text-slate-100 drop-shadow-sm">{title}</h2>
           <span className="inline-flex items-center justify-center min-w-[24px] h-6 px-2 
             text-xs font-bold rounded-full 
             bg-gradient-to-r from-blue-500 to-cyan-500 text-white
@@ -1390,11 +1394,12 @@ function SchedulePanel({
             {events.length}
           </span>
         </div>
-        <p className="text-[10px] sm:text-xs text-muted-foreground hidden sm:block font-medium">{date}</p>
+        <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 hidden sm:block font-medium">{date}</p>
       </div>
       <div 
         ref={containerRef}
-        className="flex-1 overflow-y-auto p-2 sm:p-3 scrollbar-hide space-y-2"
+        className="flex-1 overflow-y-auto p-2 sm:p-3 scrollbar-hide space-y-2
+          bg-gradient-to-b from-transparent via-slate-50/30 to-transparent dark:via-slate-900/20"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {events.length === 0 ? (
@@ -1623,13 +1628,16 @@ function PersonnelColumn({
       className="flex flex-col overflow-hidden h-full cursor-pointer"
       onDoubleClick={onDoubleClick}
     >
-      <div className="px-2 py-2 border-b border-gray-200/30 dark:border-gray-700/30 
-        bg-gradient-to-r from-gray-50/80 to-transparent dark:from-gray-800/50 dark:to-transparent
-        flex-shrink-0 flex items-center justify-center" style={{ height: '52px' }}>
+      <div className="px-2 py-2 
+        bg-gradient-to-r from-slate-200/90 via-slate-100/70 to-slate-50/50 
+        dark:from-slate-800/80 dark:via-slate-800/60 dark:to-slate-900/40
+        border-b-2 border-slate-300/60 dark:border-slate-600/50
+        flex-shrink-0 flex items-center justify-center shadow-sm relative overflow-hidden" style={{ height: '52px' }}>
+        {/* Subtle accent line at top */}
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-slate-400 via-gray-400 to-slate-400 opacity-60" />
         <div className="flex items-center justify-center gap-2 w-full">
-          <h3 className="text-xs sm:text-sm lg:text-base font-bold text-foreground tracking-wide text-center leading-tight line-clamp-2 flex-1
-            bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-300 
-            bg-clip-text text-transparent">{title}</h3>
+          <h3 className="text-xs sm:text-sm lg:text-base font-bold tracking-wide text-center leading-tight line-clamp-2 flex-1
+            text-slate-800 dark:text-slate-100">{title}</h3>
           <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 
             text-xs font-bold rounded-full 
             bg-gradient-to-r from-slate-500 to-gray-600 text-white
@@ -1640,7 +1648,8 @@ function PersonnelColumn({
       </div>
       <div 
         ref={containerRef}
-        className="flex-1 overflow-y-auto p-1.5 scrollbar-hide min-h-0 space-y-1.5"
+        className="flex-1 overflow-y-auto p-1.5 scrollbar-hide min-h-0 space-y-1.5
+          bg-gradient-to-b from-transparent via-slate-50/20 to-transparent dark:via-slate-900/10"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {personnel.length === 0 ? (
@@ -2041,13 +2050,16 @@ function UrgentConcernColumn({
       className="flex flex-col overflow-hidden h-full cursor-pointer"
       onDoubleClick={onDoubleClick}
     >
-      <div className="px-2 py-1.5 border-b border-gray-200/30 dark:border-gray-700/30 
-        bg-gradient-to-r from-red-50/80 to-transparent dark:from-red-900/20 dark:to-transparent
-        flex-shrink-0">
+      <div className="px-2 py-2 
+        bg-gradient-to-r from-red-100/90 via-red-50/70 to-orange-50/50 
+        dark:from-red-900/40 dark:via-red-900/30 dark:to-red-950/20
+        border-b-2 border-red-300/60 dark:border-red-700/50
+        flex-shrink-0 shadow-sm relative overflow-hidden">
+        {/* Subtle accent line at top */}
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-red-500 via-orange-500 to-red-500 opacity-80" />
         <div className="flex items-center justify-center gap-2">
           <h3 className="text-base sm:text-lg lg:text-xl font-bold tracking-wide uppercase
-            bg-gradient-to-r from-red-600 to-orange-500 
-            bg-clip-text text-transparent">URGENT CONCERNS</h3>
+            text-red-700 dark:text-red-300">URGENT CONCERNS</h3>
           <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 
             text-xs font-bold rounded-full 
             bg-gradient-to-r from-red-500 to-orange-500 text-white
@@ -2058,7 +2070,8 @@ function UrgentConcernColumn({
       </div>
       <div 
         ref={containerRef}
-        className="flex-1 overflow-y-auto p-1 scrollbar-hide min-h-0"
+        className="flex-1 overflow-y-auto p-1 scrollbar-hide min-h-0
+          bg-gradient-to-b from-transparent via-red-50/10 to-transparent dark:via-red-950/10"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {concerns.length === 0 ? (
@@ -2175,13 +2188,16 @@ function ProjectColumn({
       className="flex flex-col overflow-hidden h-full cursor-pointer"
       onDoubleClick={onDoubleClick}
     >
-      <div className="px-2 py-1.5 border-b border-gray-200/30 dark:border-gray-700/30 
-        bg-gradient-to-r from-green-50/80 to-transparent dark:from-green-900/20 dark:to-transparent
-        flex-shrink-0">
+      <div className="px-2 py-2 
+        bg-gradient-to-r from-green-100/90 via-green-50/70 to-emerald-50/50 
+        dark:from-green-900/40 dark:via-green-900/30 dark:to-green-950/20
+        border-b-2 border-green-300/60 dark:border-green-700/50
+        flex-shrink-0 shadow-sm relative overflow-hidden">
+        {/* Subtle accent line at top */}
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-green-500 via-emerald-500 to-green-500 opacity-80" />
         <div className="flex items-center justify-center gap-2">
           <h3 className="text-base sm:text-lg lg:text-xl font-bold tracking-wide uppercase
-            bg-gradient-to-r from-green-600 to-emerald-500 
-            bg-clip-text text-transparent">ONGOING PROJECT REQUESTS</h3>
+            text-green-700 dark:text-green-300">ONGOING PROJECT REQUESTS</h3>
           <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 
             text-xs font-bold rounded-full 
             bg-gradient-to-r from-green-500 to-emerald-500 text-white
@@ -2192,7 +2208,8 @@ function ProjectColumn({
       </div>
       <div 
         ref={containerRef}
-        className="flex-1 overflow-y-auto p-1.5 scrollbar-hide min-h-0 space-y-1.5"
+        className="flex-1 overflow-y-auto p-1.5 scrollbar-hide min-h-0 space-y-1.5
+          bg-gradient-to-b from-transparent via-green-50/10 to-transparent dark:via-green-950/10"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {projects.length === 0 ? (
