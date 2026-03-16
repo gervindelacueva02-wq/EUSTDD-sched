@@ -1833,7 +1833,7 @@ function ProjectItem({
       exit={{ opacity: 0, scale: 0.95 }}
       className="flex items-center justify-between py-2 px-2 sm:px-3 hover:bg-muted/50 rounded group transition-colors gap-2"
     >
-      <span className="font-medium text-sm sm:text-base lg:text-[18px] text-foreground flex-1 line-clamp-2 break-words">{project.name}</span>
+      <span className="font-medium text-sm sm:text-base text-foreground flex-1 line-clamp-2 break-words">{project.name}</span>
       <div className="flex items-center gap-2 flex-shrink-0">
         {/* Number display */}
         <span className="min-w-[32px] text-center text-base font-bold text-foreground tabular-nums">
@@ -1915,7 +1915,7 @@ function UrgentConcernItem({
       className="flex items-center justify-between py-2 px-2 sm:px-3 hover:bg-muted/50 rounded group transition-colors"
     >
       <div className="flex-1 min-w-0">
-        <span className="font-medium text-sm sm:text-base lg:text-[18px] text-foreground line-clamp-2 break-words block">{concern.title}</span>
+        <span className="font-medium text-sm sm:text-base text-foreground line-clamp-2 break-words block">{concern.title}</span>
         {concern.description && (
           <span className="text-xs sm:text-sm text-muted-foreground line-clamp-2 break-words block">{concern.description}</span>
         )}
@@ -2058,7 +2058,7 @@ function UrgentConcernColumn({
         {/* Subtle accent line at top */}
         <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-red-500 via-orange-500 to-red-500 opacity-80" />
         <div className="flex items-center justify-center gap-2">
-          <h3 className="text-base sm:text-lg lg:text-xl font-bold tracking-wide uppercase
+          <h3 className="text-sm sm:text-base lg:text-lg font-bold tracking-wide uppercase
             text-red-700 dark:text-red-300">URGENT CONCERNS</h3>
           <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 
             text-xs font-bold rounded-full 
@@ -2070,7 +2070,7 @@ function UrgentConcernColumn({
       </div>
       <div 
         ref={containerRef}
-        className="flex-1 overflow-y-auto p-1 scrollbar-hide min-h-0
+        className="flex-1 overflow-y-auto p-1.5 scrollbar-hide min-h-0 space-y-1
           bg-gradient-to-b from-transparent via-red-50/10 to-transparent dark:via-red-950/10"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
@@ -2196,7 +2196,7 @@ function ProjectColumn({
         {/* Subtle accent line at top */}
         <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-green-500 via-emerald-500 to-green-500 opacity-80" />
         <div className="flex items-center justify-center gap-2">
-          <h3 className="text-base sm:text-lg lg:text-xl font-bold tracking-wide uppercase
+          <h3 className="text-sm sm:text-base lg:text-lg font-bold tracking-wide uppercase
             text-green-700 dark:text-green-300">ONGOING PROJECT REQUESTS</h3>
           <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 
             text-xs font-bold rounded-full 
@@ -2208,7 +2208,7 @@ function ProjectColumn({
       </div>
       <div 
         ref={containerRef}
-        className="flex-1 overflow-y-auto p-1.5 scrollbar-hide min-h-0 space-y-1.5
+        className="flex-1 overflow-y-auto p-1.5 scrollbar-hide min-h-0 space-y-1
           bg-gradient-to-b from-transparent via-green-50/10 to-transparent dark:via-green-950/10"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
@@ -5075,7 +5075,7 @@ export default function EUSTDDSchedule() {
   const renderMainContent = () => {
     if (viewMode === 'day') {
       return (
-        <main className="flex-1 p-1 sm:p-2 grid grid-cols-1 lg:grid-cols-2 grid-rows-[1fr_1fr] gap-1 sm:gap-2 max-w-[1920px] mx-auto w-full min-h-0 overflow-hidden">
+        <main className="flex-1 p-1 sm:p-2 grid grid-cols-1 lg:grid-cols-2 grid-rows-4 lg:grid-rows-2 gap-1 sm:gap-2 max-w-[1920px] mx-auto w-full min-h-0 overflow-hidden">
           <SchedulePanel 
             title="TODAY'S SCHEDULE"
             date={format(today, 'EEEE, MMMM d, yyyy')}
