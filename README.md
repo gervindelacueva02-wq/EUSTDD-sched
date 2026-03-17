@@ -139,3 +139,43 @@ This scaffold includes a comprehensive set of modern web development tools:
 ---
 
 Built with ❤️ for the developer community. Supercharged by [Z.ai](https://chat.z.ai) 🚀
+
+---
+
+## 🗄️ Database Setup (Free PostgreSQL with No Expiry)
+
+This project uses **Neon** for a free PostgreSQL database that **never expires**.
+
+### Setting Up Neon Database
+
+1. **Create a free account**: Go to [neon.tech](https://neon.tech) and sign up
+2. **Create a new project**: Click "Create Project" (takes ~30 seconds)
+3. **Copy the connection strings**:
+   - You'll get a connection string like: `postgresql://username:password@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode=require`
+   - For `DIRECT_DATABASE_URL`, use the same string but with `-direct` in the host (e.g., `ep-xxx-direct.us-east-2.aws.neon.tech`)
+
+### Environment Variables
+
+Create a `.env` file with:
+
+```env
+DATABASE_URL="postgresql://username:password@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode=require"
+DIRECT_DATABASE_URL="postgresql://username:password@ep-xxx-direct.us-east-2.aws.neon.tech/neondb?sslmode=require"
+```
+
+### Deploy to Render
+
+1. Push your code to GitHub
+2. Create a new Web Service on Render
+3. Connect your GitHub repository
+4. Set the environment variables:
+   - `DATABASE_URL` - Your Neon connection string
+   - `DIRECT_DATABASE_URL` - Your Neon direct connection string
+5. Deploy!
+
+### Why Neon?
+
+- ✅ **Free Forever** - No expiry like Render's database
+- ✅ **PostgreSQL** - Full compatibility with Prisma
+- ✅ **Auto-scaling** - Handles traffic spikes
+- ✅ **Branching** - Create database branches for testing

@@ -3,7 +3,7 @@
   "version": "0.2.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3000 2>&1 | tee dev.log",
+    "dev": "DATABASE_URL=\"postgresql://neondb_owner:npg_cv2PtmR7LlTS@ep-muddy-lab-adk45l24-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require\" DIRECT_DATABASE_URL=\"postgresql://neondb_owner:npg_cv2PtmR7LlTS@ep-muddy-lab-adk45l24.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require\" next dev -p 3000 2>&1 | tee dev.log",
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint .",
@@ -11,6 +11,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:reset": "prisma migrate reset",
+    "db:migrate-data": "npx tsx scripts/migrate-database.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
