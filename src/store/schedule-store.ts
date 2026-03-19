@@ -1,11 +1,6 @@
 import { create } from 'zustand';
 import type { ScheduleStore, ScheduleEvent, PersonnelStatus, Project, TickerMessage, AppSettings, TransitionStyle, UrgentConcern } from '@/types/schedule';
 
-// Generate unique ID
-const generateId = () => {
-  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-};
-
 // Default settings
 const defaultSettings: AppSettings = {
   theme: 'light',
@@ -22,120 +17,16 @@ const defaultSettings: AppSettings = {
   pin: '',
 };
 
-// Demo data for initial state (will be replaced by server data)
-const demoEvents: ScheduleEvent[] = [
-  {
-    id: generateId(),
-    title: 'Team Stand-up Meeting',
-    dateStarted: new Date().toISOString().split('T')[0],
-    timeStart: '09:00',
-    timeEnd: '09:30',
-    details: 'Conference Room A',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: generateId(),
-    title: 'Project Review',
-    dateStarted: new Date().toISOString().split('T')[0],
-    timeStart: '14:00',
-    timeEnd: '15:30',
-    details: 'Review Q4 deliverables',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: generateId(),
-    title: 'Client Presentation',
-    dateStarted: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-    timeStart: '10:00',
-    timeEnd: '11:30',
-    details: 'Present new features',
-    createdAt: new Date().toISOString(),
-  },
-];
-
-const demoPersonnel: PersonnelStatus[] = [
-  {
-    id: generateId(),
-    name: 'John Smith',
-    type: 'WFH',
-    dateStart: new Date().toISOString().split('T')[0],
-    dateEnd: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: generateId(),
-    name: 'Jane Doe',
-    type: 'CTO',
-    dateStart: new Date().toISOString().split('T')[0],
-    dateEnd: new Date(Date.now() + 172800000).toISOString().split('T')[0],
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: generateId(),
-    name: 'Mike Johnson',
-    type: 'TRAVEL',
-    dateStart: new Date().toISOString().split('T')[0],
-    dateEnd: new Date(Date.now() + 259200000).toISOString().split('T')[0],
-    location: 'New York',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: generateId(),
-    name: 'Sarah Wilson',
-    type: 'FL',
-    dateStart: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-    dateEnd: new Date(Date.now() + 172800000).toISOString().split('T')[0],
-    createdAt: new Date().toISOString(),
-  },
-];
-
-const demoProjects: Project[] = [
-  {
-    id: generateId(),
-    name: 'Website Redesign',
-    number: 5,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: generateId(),
-    name: 'Mobile App Development',
-    number: 3,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: generateId(),
-    name: 'API Integration',
-    number: 2,
-    createdAt: new Date().toISOString(),
-  },
-];
-
-const demoUrgentConcerns: UrgentConcern[] = [
-  {
-    id: generateId(),
-    title: 'Server Downtime',
-    description: 'Production server experiencing intermittent issues',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: generateId(),
-    title: 'Database Migration',
-    description: 'Need to migrate legacy data to new schema',
-    createdAt: new Date().toISOString(),
-  },
-];
-
-// Debounce helper
-let saveTimeout: NodeJS.Timeout | null = null;
+// Sync interval
 let syncInterval: NodeJS.Timeout | null = null;
 let lastServerUpdate: string = '';
 
 export const useScheduleStore = create<ScheduleStore>()((set, get) => ({
   // Initial state
-  events: demoEvents,
-  personnelStatuses: demoPersonnel,
-  projects: demoProjects,
-  urgentConcerns: demoUrgentConcerns,
+  events: [],
+  personnelStatuses: [],
+  projects: [],
+  urgentConcerns: [],
   tickerMessages: [],
   settings: defaultSettings,
   _hasHydrated: false,
@@ -143,15 +34,15 @@ export const useScheduleStore = create<ScheduleStore>()((set, get) => ({
   // Load data from server
   loadFromServer: async () => {
     try {
-      const response = await fetch('/api/schedule');
+      const response = await fetch('/api/data');
       if (response.ok) {
         const data = await response.json();
         lastServerUpdate = JSON.stringify(data);
         set({
-          events: data.events || demoEvents,
-          personnelStatuses: data.personnelStatuses || demoPersonnel,
-          projects: data.projects || demoProjects,
-          urgentConcerns: data.urgentConcerns || demoUrgentConcerns,
+          events: data.events || [],
+          personnelStatuses: data.personnelStatuses || [],
+          projects: data.projects || [],
+          urgentConcerns: data.urgentConcerns || [],
           tickerMessages: data.tickerMessages || [],
           settings: { ...defaultSettings, ...data.settings },
           _hasHydrated: true,
@@ -171,7 +62,7 @@ export const useScheduleStore = create<ScheduleStore>()((set, get) => ({
     
     syncInterval = setInterval(async () => {
       try {
-        const response = await fetch('/api/schedule');
+        const response = await fetch('/api/data');
         if (response.ok) {
           const data = await response.json();
           const serverUpdate = JSON.stringify(data);
@@ -203,239 +94,378 @@ export const useScheduleStore = create<ScheduleStore>()((set, get) => ({
     }
   },
 
-  // Save data to server (debounced)
+  // Save data to server (no-op, using individual API calls now)
   saveToServer: async () => {
-    if (saveTimeout) {
-      clearTimeout(saveTimeout);
-    }
-    
-    saveTimeout = setTimeout(async () => {
-      try {
-        const state = get();
-        const dataToSend = {
-          events: state.events,
-          personnelStatuses: state.personnelStatuses,
-          projects: state.projects,
-          urgentConcerns: state.urgentConcerns,
-          tickerMessages: state.tickerMessages,
-          settings: state.settings,
-        };
-        
-        const response = await fetch('/api/schedule', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(dataToSend),
-        });
-        
-        if (response.ok) {
-          lastServerUpdate = JSON.stringify(dataToSend);
-        }
-      } catch (error) {
-        console.error('Failed to save to server:', error);
-      }
-    }, 500); // 500ms debounce
+    // This is kept for backward compatibility but is now a no-op
+    // Individual API calls are made for each action
   },
 
   // Event actions
-  addEvent: (eventData) => {
-    const newEvent: ScheduleEvent = {
-      ...eventData,
-      id: generateId(),
-      createdAt: new Date().toISOString(),
-    };
-    set((state) => ({
-      events: [...state.events, newEvent],
-    }));
-    get().saveToServer();
+  addEvent: async (eventData) => {
+    try {
+      const response = await fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(eventData),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        set((state) => ({
+          events: [...state.events, data.event],
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to add event:', error);
+    }
   },
 
-  updateEvent: (id, eventData) => {
-    set((state) => ({
-      events: state.events.map((event) =>
-        event.id === id ? { ...event, ...eventData } : event
-      ),
-    }));
-    get().saveToServer();
+  updateEvent: async (id, eventData) => {
+    try {
+      const response = await fetch(`/api/events/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(eventData),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        set((state) => ({
+          events: state.events.map((event) =>
+            event.id === id ? data.event : event
+          ),
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to update event:', error);
+    }
   },
 
-  deleteEvent: (id) => {
-    set((state) => ({
-      events: state.events.filter((event) => event.id !== id),
-    }));
-    get().saveToServer();
+  deleteEvent: async (id) => {
+    try {
+      const response = await fetch(`/api/events/${id}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        set((state) => ({
+          events: state.events.filter((event) => event.id !== id),
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to delete event:', error);
+    }
   },
 
   // Personnel Status actions
-  addPersonnelStatus: (statusData) => {
-    const newStatus: PersonnelStatus = {
-      ...statusData,
-      id: generateId(),
-      createdAt: new Date().toISOString(),
-    };
-    set((state) => ({
-      personnelStatuses: [...state.personnelStatuses, newStatus],
-    }));
-    get().saveToServer();
+  addPersonnelStatus: async (statusData) => {
+    try {
+      const response = await fetch('/api/personnel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(statusData),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        set((state) => ({
+          personnelStatuses: [...state.personnelStatuses, data.personnel],
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to add personnel:', error);
+    }
   },
 
-  updatePersonnelStatus: (id, statusData) => {
-    set((state) => ({
-      personnelStatuses: state.personnelStatuses.map((status) =>
-        status.id === id ? { ...status, ...statusData } : status
-      ),
-    }));
-    get().saveToServer();
+  updatePersonnelStatus: async (id, statusData) => {
+    try {
+      const response = await fetch(`/api/personnel/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(statusData),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        set((state) => ({
+          personnelStatuses: state.personnelStatuses.map((status) =>
+            status.id === id ? data.personnel : status
+          ),
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to update personnel:', error);
+    }
   },
 
-  deletePersonnelStatus: (id) => {
-    set((state) => ({
-      personnelStatuses: state.personnelStatuses.filter((status) => status.id !== id),
-    }));
-    get().saveToServer();
+  deletePersonnelStatus: async (id) => {
+    try {
+      const response = await fetch(`/api/personnel/${id}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        set((state) => ({
+          personnelStatuses: state.personnelStatuses.filter((status) => status.id !== id),
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to delete personnel:', error);
+    }
   },
 
   // Project actions
-  addProject: (projectData) => {
-    const newProject: Project = {
-      ...projectData,
-      id: generateId(),
-      createdAt: new Date().toISOString(),
-    };
-    set((state) => ({
-      projects: [...state.projects, newProject],
-    }));
-    get().saveToServer();
+  addProject: async (projectData) => {
+    try {
+      const response = await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(projectData),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        set((state) => ({
+          projects: [...state.projects, data.project],
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to add project:', error);
+    }
   },
 
-  updateProject: (id, projectData) => {
-    set((state) => ({
-      projects: state.projects.map((project) =>
-        project.id === id ? { ...project, ...projectData } : project
-      ),
-    }));
-    get().saveToServer();
+  updateProject: async (id, projectData) => {
+    try {
+      const response = await fetch(`/api/projects/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(projectData),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        set((state) => ({
+          projects: state.projects.map((project) =>
+            project.id === id ? data.project : project
+          ),
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to update project:', error);
+    }
   },
 
-  deleteProject: (id) => {
-    set((state) => ({
-      projects: state.projects.filter((project) => project.id !== id),
-    }));
-    get().saveToServer();
+  deleteProject: async (id) => {
+    try {
+      const response = await fetch(`/api/projects/${id}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        set((state) => ({
+          projects: state.projects.filter((project) => project.id !== id),
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to delete project:', error);
+    }
   },
 
-  incrementProject: (id) => {
-    set((state) => ({
-      projects: state.projects.map((project) =>
-        project.id === id ? { ...project, number: project.number + 1 } : project
-      ),
-    }));
-    get().saveToServer();
+  incrementProject: async (id) => {
+    const state = get();
+    const project = state.projects.find(p => p.id === id);
+    if (project) {
+      try {
+        const response = await fetch(`/api/projects/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ number: project.number + 1 }),
+        });
+        if (response.ok) {
+          const data = await response.json();
+          set((state) => ({
+            projects: state.projects.map((p) =>
+              p.id === id ? data.project : p
+            ),
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to increment project:', error);
+      }
+    }
   },
 
-  decrementProject: (id) => {
-    set((state) => ({
-      projects: state.projects.map((project) =>
-        project.id === id ? { ...project, number: Math.max(0, project.number - 1) } : project
-      ),
-    }));
-    get().saveToServer();
+  decrementProject: async (id) => {
+    const state = get();
+    const project = state.projects.find(p => p.id === id);
+    if (project && project.number > 0) {
+      try {
+        const response = await fetch(`/api/projects/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ number: project.number - 1 }),
+        });
+        if (response.ok) {
+          const data = await response.json();
+          set((state) => ({
+            projects: state.projects.map((p) =>
+              p.id === id ? data.project : p
+            ),
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to decrement project:', error);
+      }
+    }
   },
 
   // Urgent Concern actions
-  addUrgentConcern: (concernData) => {
-    const newConcern: UrgentConcern = {
-      ...concernData,
-      id: generateId(),
-      createdAt: new Date().toISOString(),
-    };
-    set((state) => ({
-      urgentConcerns: [...state.urgentConcerns, newConcern],
-    }));
-    get().saveToServer();
+  addUrgentConcern: async (concernData) => {
+    try {
+      const response = await fetch('/api/urgent-concerns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(concernData),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        set((state) => ({
+          urgentConcerns: [...state.urgentConcerns, data.urgentConcern],
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to add urgent concern:', error);
+    }
   },
 
-  updateUrgentConcern: (id, concernData) => {
-    set((state) => ({
-      urgentConcerns: state.urgentConcerns.map((concern) =>
-        concern.id === id ? { ...concern, ...concernData } : concern
-      ),
-    }));
-    get().saveToServer();
+  updateUrgentConcern: async (id, concernData) => {
+    try {
+      const response = await fetch(`/api/urgent-concerns/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(concernData),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        set((state) => ({
+          urgentConcerns: state.urgentConcerns.map((concern) =>
+            concern.id === id ? data.urgentConcern : concern
+          ),
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to update urgent concern:', error);
+    }
   },
 
-  deleteUrgentConcern: (id) => {
-    set((state) => ({
-      urgentConcerns: state.urgentConcerns.filter((concern) => concern.id !== id),
-    }));
-    get().saveToServer();
+  deleteUrgentConcern: async (id) => {
+    try {
+      const response = await fetch(`/api/urgent-concerns/${id}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        set((state) => ({
+          urgentConcerns: state.urgentConcerns.filter((concern) => concern.id !== id),
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to delete urgent concern:', error);
+    }
   },
 
   // Ticker Message actions
-  addTickerMessage: (messageData) => {
-    const newMessage: TickerMessage = {
-      ...messageData,
-      id: generateId(),
-      createdAt: new Date().toISOString(),
-    };
-    set((state) => ({
-      tickerMessages: [...state.tickerMessages, newMessage],
-    }));
-    get().saveToServer();
+  addTickerMessage: async (messageData) => {
+    try {
+      const response = await fetch('/api/ticker-messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(messageData),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        set((state) => ({
+          tickerMessages: [...state.tickerMessages, data.tickerMessage],
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to add ticker message:', error);
+    }
   },
 
-  updateTickerMessage: (id, messageData) => {
-    set((state) => ({
-      tickerMessages: state.tickerMessages.map((msg) =>
-        msg.id === id ? { ...msg, ...messageData } : msg
-      ),
-    }));
-    get().saveToServer();
+  updateTickerMessage: async (id, messageData) => {
+    try {
+      const response = await fetch(`/api/ticker-messages/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(messageData),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        set((state) => ({
+          tickerMessages: state.tickerMessages.map((msg) =>
+            msg.id === id ? data.tickerMessage : msg
+          ),
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to update ticker message:', error);
+    }
   },
 
-  deleteTickerMessage: (id) => {
-    set((state) => ({
-      tickerMessages: state.tickerMessages.filter((msg) => msg.id !== id),
-    }));
-    get().saveToServer();
+  deleteTickerMessage: async (id) => {
+    try {
+      const response = await fetch(`/api/ticker-messages/${id}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        set((state) => ({
+          tickerMessages: state.tickerMessages.filter((msg) => msg.id !== id),
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to delete ticker message:', error);
+    }
   },
 
   // Settings actions
-  updateSettings: (newSettings) => {
-    set((state) => ({
-      settings: { ...state.settings, ...newSettings },
-    }));
-    get().saveToServer();
+  updateSettings: async (newSettings) => {
+    try {
+      const response = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...get().settings, ...newSettings }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        set({ settings: data.settings });
+      }
+    } catch (error) {
+      console.error('Failed to update settings:', error);
+    }
   },
 
-  updateStatusColors: (colors) => {
-    set((state) => ({
-      settings: {
-        ...state.settings,
-        statusColors: { ...state.settings.statusColors, ...colors },
-      },
-    }));
-    get().saveToServer();
+  updateStatusColors: async (colors) => {
+    const newSettings = {
+      ...get().settings,
+      statusColors: { ...get().settings.statusColors, ...colors },
+    };
+    try {
+      const response = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newSettings),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        set({ settings: data.settings });
+      }
+    } catch (error) {
+      console.error('Failed to update status colors:', error);
+    }
   },
 
   setTheme: (theme) => {
-    set((state) => ({
-      settings: { ...state.settings, theme },
-    }));
-    get().saveToServer();
+    get().updateSettings({ theme });
   },
 
   setPin: (pin) => {
-    set((state) => ({
-      settings: { ...state.settings, pin },
-    }));
-    get().saveToServer();
+    get().updateSettings({ pin });
   },
 
   togglePinEnabled: () => {
-    set((state) => ({
-      settings: { ...state.settings, pinEnabled: !state.settings.pinEnabled },
-    }));
-    get().saveToServer();
+    const current = get().settings.pinEnabled;
+    get().updateSettings({ pinEnabled: !current });
   },
 
   // Hydration
