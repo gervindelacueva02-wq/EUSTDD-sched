@@ -93,35 +93,35 @@ export interface ScheduleStoreState {
 // Store Actions
 export interface ScheduleStoreActions {
   // Event actions
-  addEvent: (event: Omit<ScheduleEvent, 'id' | 'createdAt'>) => Promise<void>;
-  updateEvent: (id: string, event: Partial<ScheduleEvent>) => Promise<void>;
-  deleteEvent: (id: string) => Promise<void>;
+  addEvent: (event: Omit<ScheduleEvent, 'id' | 'createdAt'>) => void;
+  updateEvent: (id: string, event: Partial<ScheduleEvent>) => void;
+  deleteEvent: (id: string) => void;
   
   // Personnel Status actions
-  addPersonnelStatus: (status: Omit<PersonnelStatus, 'id' | 'createdAt'>) => Promise<void>;
-  updatePersonnelStatus: (id: string, status: Partial<PersonnelStatus>) => Promise<void>;
-  deletePersonnelStatus: (id: string) => Promise<void>;
+  addPersonnelStatus: (status: Omit<PersonnelStatus, 'id' | 'createdAt'>) => void;
+  updatePersonnelStatus: (id: string, status: Partial<PersonnelStatus>) => void;
+  deletePersonnelStatus: (id: string) => void;
   
   // Project actions
-  addProject: (project: Omit<Project, 'id' | 'createdAt'>) => Promise<void>;
-  updateProject: (id: string, project: Partial<Project>) => Promise<void>;
-  deleteProject: (id: string) => Promise<void>;
-  incrementProject: (id: string) => Promise<void>;
-  decrementProject: (id: string) => Promise<void>;
+  addProject: (project: Omit<Project, 'id' | 'createdAt'>) => void;
+  updateProject: (id: string, project: Partial<Project>) => void;
+  deleteProject: (id: string) => void;
+  incrementProject: (id: string) => void;
+  decrementProject: (id: string) => void;
   
   // Urgent Concern actions
-  addUrgentConcern: (concern: Omit<UrgentConcern, 'id' | 'createdAt'>) => Promise<void>;
-  updateUrgentConcern: (id: string, concern: Partial<UrgentConcern>) => Promise<void>;
-  deleteUrgentConcern: (id: string) => Promise<void>;
+  addUrgentConcern: (concern: Omit<UrgentConcern, 'id' | 'createdAt'>) => void;
+  updateUrgentConcern: (id: string, concern: Partial<UrgentConcern>) => void;
+  deleteUrgentConcern: (id: string) => void;
   
   // Ticker Message actions
-  addTickerMessage: (message: Omit<TickerMessage, 'id' | 'createdAt'>) => Promise<void>;
-  updateTickerMessage: (id: string, message: Partial<Omit<TickerMessage, 'id' | 'createdAt'>>) => Promise<void>;
-  deleteTickerMessage: (id: string) => Promise<void>;
+  addTickerMessage: (message: Omit<TickerMessage, 'id' | 'createdAt'>) => void;
+  updateTickerMessage: (id: string, message: Partial<Omit<TickerMessage, 'id' | 'createdAt'>>) => void;
+  deleteTickerMessage: (id: string) => void;
   
   // Settings actions
-  updateSettings: (settings: Partial<AppSettings>) => Promise<void>;
-  updateStatusColors: (colors: Partial<AppSettings['statusColors']>) => Promise<void>;
+  updateSettings: (settings: Partial<AppSettings>) => void;
+  updateStatusColors: (colors: Partial<AppSettings['statusColors']>) => void;
   setTheme: (theme: 'light' | 'dark') => void;
   setPin: (pin: string) => void;
   togglePinEnabled: () => void;

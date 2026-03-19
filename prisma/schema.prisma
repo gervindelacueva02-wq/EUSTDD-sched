@@ -8,82 +8,14 @@ datasource db {
   directUrl = env("DIRECT_DATABASE_URL")
 }
 
-model Event {
-  id          String   @id @default(uuid())
-  title       String
-  dateStarted DateTime
-  timeStart   String
-  timeEnd     String
-  details     String?
-  categories  String   @default("[]")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([dateStarted])
-}
-
-model Personnel {
-  id        String   @id @default(uuid())
-  name      String
-  type      String
-  dateStart DateTime
-  dateEnd   DateTime
-  location  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([type])
-  @@index([dateEnd])
-}
-
-model Project {
-  id        String   @id @default(uuid())
-  name      String
-  number    Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model UrgentConcern {
-  id          String   @id @default(uuid())
-  title       String
-  description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model TickerMessage {
-  id        String   @id @default(uuid())
-  message   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model AppSettings {
-  id        String @id @default("main")
-  settings  String @default("{}")
-  updatedAt DateTime @updatedAt
-}
-
-model AutoDeleteLog {
-  id        String   @id @default(uuid())
-  tableName String
-  recordId  String
-  deletedAt DateTime @default(now())
-  reason    String
-
-  @@index([tableName])
-  @@index([deletedAt])
-}
-
 model ScheduleData {
-  id             String   @id @default("main")
-  events         String   @default("[]")
-  personnel      String   @default("[]")
-  projects       String   @default("[]")
-  tickerMessages String   @default("[]")
-  urgentConcerns String   @default("[]")
-  settings       String   @default("{}")
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id              String   @id @default("main")
+  events          String   @default("[]")
+  personnel       String   @default("[]")
+  projects        String   @default("[]")
+  tickerMessages  String   @default("[]")
+  urgentConcerns  String   @default("[]")
+  settings        String   @default("{}")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
