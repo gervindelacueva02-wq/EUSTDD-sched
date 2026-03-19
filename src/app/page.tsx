@@ -1743,14 +1743,14 @@ function PersonnelItemCompact({
     >
       <div className="flex-1 min-w-0 flex items-start gap-2">
         <div className="flex flex-col min-w-0 flex-1">
-          <span className="font-semibold text-sm sm:text-base text-foreground line-clamp-2 break-words">{item.name}</span>
+          <span className="font-semibold text-sm sm:text-base text-foreground break-words">{item.name}</span>
           {item.type !== 'OTHER' && (
             <span className="text-[10px] sm:text-xs text-muted-foreground font-medium">
               {formatDateRange(item.dateStart, item.dateEnd)}
             </span>
           )}
           {item.location && (
-            <span className="text-[10px] sm:text-xs text-muted-foreground line-clamp-1">{item.location}</span>
+            <span className="text-[10px] sm:text-xs text-muted-foreground break-words">{item.location}</span>
           )}
         </div>
         {typeBadge && (
