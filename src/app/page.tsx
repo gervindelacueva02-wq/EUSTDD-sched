@@ -33,7 +33,10 @@ import {
   CloudLightning,
   CloudSnow,
   Wind,
-  Umbrella
+  Umbrella,
+  Briefcase,
+  Award,
+  Globe
 } from 'lucide-react';
 import Image from 'next/image';
 import { useScheduleStore } from '@/store/schedule-store';
@@ -115,7 +118,11 @@ const EVENT_CATEGORIES: { value: EventCategory; label: string; color: string; ic
   { value: 'disaster-mitigation', label: 'Disaster\nMitigation', color: '#a855f7', icon: <ShieldAlert className="h-3 w-3" /> }, // purple
   { value: 'human-security', label: 'Human\nSecurity', color: '#22c55e', icon: <Users className="h-3 w-3" /> }, // green
   { value: 'transport', label: 'Transport', color: '#f97316', icon: <Car className="h-3 w-3" /> }, // orange
-  { value: 'others', label: 'Others', color: '#ef4444', icon: <MoreHorizontal className="h-3 w-3" /> }, // red
+  { value: 'admin', label: 'Admin', color: '#a16207', icon: <Briefcase className="h-3 w-3" /> }, // light brown
+  { value: 'division-chief', label: 'Division\nChief', color: '#991b1b', icon: <Award className="h-3 w-3" /> }, // dark red
+  { value: 'pcieerd-officials', label: 'PCIEERD\nOfficials', color: '#ec4899', icon: <Building2 className="h-3 w-3" /> }, // pink
+  { value: 'general', label: 'General', color: '#4f46e5', icon: <Globe className="h-3 w-3" /> }, // indigo
+  { value: 'others', label: 'Others', color: '#7c2d12', icon: <MoreHorizontal className="h-3 w-3" /> }, // burgundy
 ];
 
 // Get sector color

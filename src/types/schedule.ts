@@ -2,7 +2,7 @@
 export type EventStatus = 'upcoming' | 'ongoing' | 'completed';
 
 // Event category type
-export type EventCategory = 'water' | 'construction' | 'energy' | 'disaster-mitigation' | 'human-security' | 'transport' | 'others';
+export type EventCategory = 'water' | 'construction' | 'energy' | 'disaster-mitigation' | 'human-security' | 'transport' | 'admin' | 'division-chief' | 'pcieerd-officials' | 'general' | 'others';
 
 // Transition style for overflow content
 export type TransitionStyle = 
