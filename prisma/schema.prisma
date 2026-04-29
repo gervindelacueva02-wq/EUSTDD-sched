@@ -1,21 +1,26 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
   directUrl = env("DIRECT_DATABASE_URL")
 }
 
 model ScheduleData {
-  id              String   @id @default("main")
-  events          String   @default("[]")
-  personnel       String   @default("[]")
-  projects        String   @default("[]")
-  tickerMessages  String   @default("[]")
-  urgentConcerns  String   @default("[]")
-  settings        String   @default("{}")
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                String   @id @default("main")
+  events            String   @default("[]") // JSON array of ScheduleEvent
+  personnel         String   @default("[]") // JSON array of PersonnelStatus
+  projects          String   @default("[]") // JSON array of Project
+  tickerMessages    String   @default("[]") // JSON array of TickerMessage
+  urgentConcerns    String   @default("[]") // JSON array of UrgentConcern
+  settings          String   @default("{}") // JSON object of AppSettings
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("schedule_data")
 }

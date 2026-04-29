@@ -88,6 +88,7 @@ export interface ScheduleStoreState {
   tickerMessages: TickerMessage[];
   settings: AppSettings;
   _hasHydrated: boolean;
+  _syncFrequency: number; // Sync frequency in seconds
 }
 
 // Store Actions
@@ -131,6 +132,7 @@ export interface ScheduleStoreActions {
   saveToServer: () => Promise<void>;
   startAutoSync: () => void;
   stopAutoSync: () => void;
+  setSyncFrequency: (seconds: number) => void;
   
   // Hydration
   setHasHydrated: (state: boolean) => void;

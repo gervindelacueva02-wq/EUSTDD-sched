@@ -128,7 +128,47 @@ const demoUrgentConcerns: UrgentConcern[] = [
 // Debounce helper
 let saveTimeout: NodeJS.Timeout | null = null;
 let syncInterval: NodeJS.Timeout | null = null;
-let lastServerUpdate: string = '';
+
+// Cache for tracking resource changes
+const resourceCache = {
+  events: '',
+  personnel: '',
+  projects: '',
+  tickerMessages: '',
+  urgentConcerns: '',
+  settings: '',
+};
+
+// Global sync frequency setting (can be modified at runtime)
+let syncFrequencyMs = 30000; // Default: 30 seconds (down from 3 seconds)
+
+// Helper function to fetch single resource
+async function fetchResource(endpoint: string): Promise<any> {
+  try {
+    const response = await fetch(endpoint);
+    if (response.ok) {
+      return await response.json();
+    }
+  } catch (error) {
+    console.error(`Failed to fetch ${endpoint}:`, error);
+  }
+  return null;
+}
+
+// Helper function to save single resource
+async function saveResource(endpoint: string, data: any): Promise<boolean> {
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return response.ok;
+  } catch (error) {
+    console.error(`Failed to save ${endpoint}:`, error);
+    return false;
+  }
+}
 
 export const useScheduleStore = create<ScheduleStore>()((set, get) => ({
   // Initial state
@@ -139,60 +179,103 @@ export const useScheduleStore = create<ScheduleStore>()((set, get) => ({
   tickerMessages: [],
   settings: defaultSettings,
   _hasHydrated: false,
+  _syncFrequency: 30, // Configurable sync frequency in seconds
 
-  // Load data from server
+  // Load data from server (initial load - fetches all resources in parallel)
   loadFromServer: async () => {
     try {
-      const response = await fetch('/api/schedule');
-      if (response.ok) {
-        const data = await response.json();
-        lastServerUpdate = JSON.stringify(data);
-        set({
-          events: data.events || demoEvents,
-          personnelStatuses: data.personnelStatuses || demoPersonnel,
-          projects: data.projects || demoProjects,
-          urgentConcerns: data.urgentConcerns || demoUrgentConcerns,
-          tickerMessages: data.tickerMessages || [],
-          settings: { ...defaultSettings, ...data.settings },
-          _hasHydrated: true,
-        });
-      } else {
-        set({ _hasHydrated: true });
-      }
+      const [events, personnel, projects, concerns, ticker, settings] = await Promise.all([
+        fetchResource('/api/schedule/events'),
+        fetchResource('/api/schedule/personnel'),
+        fetchResource('/api/schedule/projects'),
+        fetchResource('/api/schedule/concerns'),
+        fetchResource('/api/schedule/ticker'),
+        fetchResource('/api/schedule/settings'),
+      ]);
+
+      // Update cache
+      resourceCache.events = JSON.stringify(events || []);
+      resourceCache.personnel = JSON.stringify(personnel || []);
+      resourceCache.projects = JSON.stringify(projects || []);
+      resourceCache.urgentConcerns = JSON.stringify(concerns || []);
+      resourceCache.tickerMessages = JSON.stringify(ticker || []);
+      resourceCache.settings = JSON.stringify(settings || {});
+
+      set({
+        events: events || demoEvents,
+        personnelStatuses: personnel || demoPersonnel,
+        projects: projects || demoProjects,
+        urgentConcerns: concerns || demoUrgentConcerns,
+        tickerMessages: ticker || [],
+        settings: { ...defaultSettings, ...settings },
+        _hasHydrated: true,
+      });
     } catch (error) {
       console.error('Failed to load from server:', error);
       set({ _hasHydrated: true });
     }
   },
 
-  // Start auto-sync (polling every 3 seconds)
+  // Start auto-sync with configurable frequency (default 30 seconds instead of 3)
   startAutoSync: () => {
     if (syncInterval) return; // Already running
     
     syncInterval = setInterval(async () => {
       try {
-        const response = await fetch('/api/schedule');
-        if (response.ok) {
-          const data = await response.json();
-          const serverUpdate = JSON.stringify(data);
-          
-          // Only update if data changed
-          if (serverUpdate !== lastServerUpdate) {
-            lastServerUpdate = serverUpdate;
-            set({
-              events: data.events || [],
-              personnelStatuses: data.personnelStatuses || [],
-              projects: data.projects || [],
-              urgentConcerns: data.urgentConcerns || [],
-              tickerMessages: data.tickerMessages || [],
-              settings: { ...defaultSettings, ...data.settings },
-            });
-          }
+        const [events, personnel, projects, concerns, ticker, settings] = await Promise.all([
+          fetchResource('/api/schedule/events'),
+          fetchResource('/api/schedule/personnel'),
+          fetchResource('/api/schedule/projects'),
+          fetchResource('/api/schedule/concerns'),
+          fetchResource('/api/schedule/ticker'),
+          fetchResource('/api/schedule/settings'),
+        ]);
+
+        // Only update changed resources
+        const updates: any = {};
+        const eventsStr = JSON.stringify(events || []);
+        if (eventsStr !== resourceCache.events) {
+          resourceCache.events = eventsStr;
+          updates.events = events || [];
+        }
+
+        const personnelStr = JSON.stringify(personnel || []);
+        if (personnelStr !== resourceCache.personnel) {
+          resourceCache.personnel = personnelStr;
+          updates.personnelStatuses = personnel || [];
+        }
+
+        const projectsStr = JSON.stringify(projects || []);
+        if (projectsStr !== resourceCache.projects) {
+          resourceCache.projects = projectsStr;
+          updates.projects = projects || [];
+        }
+
+        const concernsStr = JSON.stringify(concerns || []);
+        if (concernsStr !== resourceCache.urgentConcerns) {
+          resourceCache.urgentConcerns = concernsStr;
+          updates.urgentConcerns = concerns || [];
+        }
+
+        const tickerStr = JSON.stringify(ticker || []);
+        if (tickerStr !== resourceCache.tickerMessages) {
+          resourceCache.tickerMessages = tickerStr;
+          updates.tickerMessages = ticker || [];
+        }
+
+        const settingsStr = JSON.stringify(settings || {});
+        if (settingsStr !== resourceCache.settings) {
+          resourceCache.settings = settingsStr;
+          updates.settings = { ...defaultSettings, ...settings };
+        }
+
+        if (Object.keys(updates).length > 0) {
+          set(updates);
         }
       } catch (error) {
         console.error('Auto-sync failed:', error);
       }
-    }, 3000); // Sync every 3 seconds
+    }, syncFrequencyMs); // Configurable sync frequency
   },
 
   // Stop auto-sync
@@ -203,7 +286,14 @@ export const useScheduleStore = create<ScheduleStore>()((set, get) => ({
     }
   },
 
-  // Save data to server (debounced)
+  // Set sync frequency (in seconds)
+  setSyncFrequency: (seconds: number) => {
+    syncFrequencyMs = Math.max(10, seconds * 1000); // Minimum 10 seconds
+    get().stopAutoSync();
+    get().startAutoSync();
+  },
+
+  // Save data to server (debounced with optimized endpoint calls)
   saveToServer: async () => {
     if (saveTimeout) {
       clearTimeout(saveTimeout);
@@ -212,24 +302,16 @@ export const useScheduleStore = create<ScheduleStore>()((set, get) => ({
     saveTimeout = setTimeout(async () => {
       try {
         const state = get();
-        const dataToSend = {
-          events: state.events,
-          personnelStatuses: state.personnelStatuses,
-          projects: state.projects,
-          urgentConcerns: state.urgentConcerns,
-          tickerMessages: state.tickerMessages,
-          settings: state.settings,
-        };
         
-        const response = await fetch('/api/schedule', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(dataToSend),
-        });
-        
-        if (response.ok) {
-          lastServerUpdate = JSON.stringify(dataToSend);
-        }
+        // Save only changed resources in parallel
+        await Promise.all([
+          saveResource('/api/schedule/events', state.events),
+          saveResource('/api/schedule/personnel', state.personnelStatuses),
+          saveResource('/api/schedule/projects', state.projects),
+          saveResource('/api/schedule/concerns', state.urgentConcerns),
+          saveResource('/api/schedule/ticker', state.tickerMessages),
+          saveResource('/api/schedule/settings', state.settings),
+        ]);
       } catch (error) {
         console.error('Failed to save to server:', error);
       }
