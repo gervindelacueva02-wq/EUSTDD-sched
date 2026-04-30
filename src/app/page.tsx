@@ -2452,8 +2452,23 @@ function EditEventModal({
               </PopoverTrigger>
               <PopoverContent className="w-[300px] p-0" align="start">
                 <div 
-                  className="space-y-1 max-h-[300px] overflow-y-scroll scrollbar-hide p-2"
-                  style={{ touchAction: 'auto' }}
+                  className="space-y-1 max-h-[300px] overflow-y-auto scrollbar-hide p-2"
+                  style={{ touchAction: 'auto', WebkitOverflowScrolling: 'touch' }}
+                  onWheel={(e) => {
+                    // Allow mouse wheel scrolling
+                    const container = e.currentTarget as HTMLDivElement;
+                    const maxScroll = container.scrollHeight - container.clientHeight;
+                    
+                    if ((container.scrollTop + e.deltaY > 0) && (container.scrollTop + e.deltaY < maxScroll)) {
+                      e.preventDefault();
+                    }
+                    container.scrollTop += e.deltaY;
+                  }}
+                  onTouchMove={(e) => {
+                    // Allow touchpad and touch scrolling
+                    const container = e.currentTarget;
+                    container.style.overscrollBehavior = 'auto';
+                  }}
                   onKeyDown={(e) => {
                     // Allow keyboard scrolling with arrow keys and Page Up/Down
                     const container = e.currentTarget;
@@ -2707,8 +2722,23 @@ function AddEventModal({
               </PopoverTrigger>
               <PopoverContent className="w-[300px] p-0" align="start">
                 <div 
-                  className="space-y-1 max-h-[300px] overflow-y-scroll scrollbar-hide p-2"
-                  style={{ touchAction: 'auto' }}
+                  className="space-y-1 max-h-[300px] overflow-y-auto scrollbar-hide p-2"
+                  style={{ touchAction: 'auto', WebkitOverflowScrolling: 'touch' }}
+                  onWheel={(e) => {
+                    // Allow mouse wheel scrolling
+                    const container = e.currentTarget as HTMLDivElement;
+                    const maxScroll = container.scrollHeight - container.clientHeight;
+                    
+                    if ((container.scrollTop + e.deltaY > 0) && (container.scrollTop + e.deltaY < maxScroll)) {
+                      e.preventDefault();
+                    }
+                    container.scrollTop += e.deltaY;
+                  }}
+                  onTouchMove={(e) => {
+                    // Allow touchpad and touch scrolling
+                    const container = e.currentTarget;
+                    container.style.overscrollBehavior = 'auto';
+                  }}
                   onKeyDown={(e) => {
                     // Allow keyboard scrolling with arrow keys and Page Up/Down
                     const container = e.currentTarget;
