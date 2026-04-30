@@ -129,15 +129,15 @@
   }
 }
 
-/* Hide scrollbar but keep functionality */
+/* Small thin scrollbar styling */
 .scrollbar-hide {
-  -ms-overflow-style: none;  /* IE and Edge */
+  -ms-overflow-style: thin;  /* IE and Edge */
   scrollbar-width: thin;  /* Firefox - thin scrollbar */
-  scrollbar-color: transparent transparent;  /* Firefox - transparent scrollbar */
+  scrollbar-color: #d1d5db transparent;  /* Firefox */
 }
 
 .scrollbar-hide::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 .scrollbar-hide::-webkit-scrollbar-track {
@@ -145,7 +145,12 @@
 }
 
 .scrollbar-hide::-webkit-scrollbar-thumb {
-  background: transparent;
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+.scrollbar-hide::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
 }
 
 /* Ticker scroll animation */

@@ -2451,7 +2451,7 @@ function EditEventModal({
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[300px] p-2" align="start">
-                <div className="space-y-1 max-h-[300px] overflow-y-auto">
+                <div className="space-y-1 max-h-[300px] overflow-y-auto scrollbar-hide">
                   {EVENT_CATEGORIES.map((cat) => (
                     <div 
                       key={cat.value} 
@@ -2681,7 +2681,7 @@ function AddEventModal({
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[300px] p-2" align="start">
-                <div className="space-y-1 max-h-[300px] overflow-y-auto">
+                <div className="space-y-1 max-h-[300px] overflow-y-auto scrollbar-hide">
                   {EVENT_CATEGORIES.map((cat) => (
                     <div 
                       key={cat.value} 
