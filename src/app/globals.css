@@ -160,6 +160,21 @@
   pointer-events: auto !important;
 }
 
+/* Sector dropdown scrolling enhancements */
+.scrollbar-hide[role="region"] {
+  touch-action: auto;
+  scroll-behavior: smooth;
+  /* Ensure wheel events aren't blocked */
+  pointer-events: auto;
+  /* Allow overflow scrolling on iOS */
+  -webkit-overflow-scrolling: touch;
+}
+
+.scrollbar-hide[role="region"]:focus {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
 /* Ticker scroll animation */
 @keyframes scroll-ticker {
   0% {

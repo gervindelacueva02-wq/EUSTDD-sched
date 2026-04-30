@@ -2451,7 +2451,32 @@ function EditEventModal({
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[300px] p-0" align="start">
-                <div className="space-y-1 max-h-[300px] overflow-y-scroll scrollbar-hide p-2">
+                <div 
+                  className="space-y-1 max-h-[300px] overflow-y-scroll scrollbar-hide p-2"
+                  style={{ touchAction: 'auto' }}
+                  onKeyDown={(e) => {
+                    // Allow keyboard scrolling with arrow keys and Page Up/Down
+                    const container = e.currentTarget;
+                    const scrollAmount = 40;
+                    
+                    if (e.key === 'ArrowDown') {
+                      e.preventDefault();
+                      container.scrollTop += scrollAmount;
+                    } else if (e.key === 'ArrowUp') {
+                      e.preventDefault();
+                      container.scrollTop -= scrollAmount;
+                    } else if (e.key === 'PageDown') {
+                      e.preventDefault();
+                      container.scrollTop += container.clientHeight;
+                    } else if (e.key === 'PageUp') {
+                      e.preventDefault();
+                      container.scrollTop -= container.clientHeight;
+                    }
+                  }}
+                  tabIndex={0}
+                  role="region"
+                  aria-label="Sector options"
+                >
                   {EVENT_CATEGORIES.map((cat) => (
                     <div 
                       key={cat.value} 
@@ -2681,7 +2706,32 @@ function AddEventModal({
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[300px] p-0" align="start">
-                <div className="space-y-1 max-h-[300px] overflow-y-scroll scrollbar-hide p-2">
+                <div 
+                  className="space-y-1 max-h-[300px] overflow-y-scroll scrollbar-hide p-2"
+                  style={{ touchAction: 'auto' }}
+                  onKeyDown={(e) => {
+                    // Allow keyboard scrolling with arrow keys and Page Up/Down
+                    const container = e.currentTarget;
+                    const scrollAmount = 40;
+                    
+                    if (e.key === 'ArrowDown') {
+                      e.preventDefault();
+                      container.scrollTop += scrollAmount;
+                    } else if (e.key === 'ArrowUp') {
+                      e.preventDefault();
+                      container.scrollTop -= scrollAmount;
+                    } else if (e.key === 'PageDown') {
+                      e.preventDefault();
+                      container.scrollTop += container.clientHeight;
+                    } else if (e.key === 'PageUp') {
+                      e.preventDefault();
+                      container.scrollTop -= container.clientHeight;
+                    }
+                  }}
+                  tabIndex={0}
+                  role="region"
+                  aria-label="Sector options"
+                >
                   {EVENT_CATEGORIES.map((cat) => (
                     <div 
                       key={cat.value} 
