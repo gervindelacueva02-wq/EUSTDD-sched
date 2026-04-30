@@ -2450,8 +2450,8 @@ function EditEventModal({
                   <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[300px] p-2" align="start">
-                <div className="space-y-1 max-h-[300px] overflow-y-auto scrollbar-hide">
+              <PopoverContent className="w-[300px] p-0" align="start">
+                <div className="space-y-1 max-h-[300px] overflow-y-scroll scrollbar-hide p-2">
                   {EVENT_CATEGORIES.map((cat) => (
                     <div 
                       key={cat.value} 
@@ -2680,8 +2680,8 @@ function AddEventModal({
                   <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[300px] p-2" align="start">
-                <div className="space-y-1 max-h-[300px] overflow-y-auto scrollbar-hide">
+              <PopoverContent className="w-[300px] p-0" align="start">
+                <div className="space-y-1 max-h-[300px] overflow-y-scroll scrollbar-hide p-2">
                   {EVENT_CATEGORIES.map((cat) => (
                     <div 
                       key={cat.value} 

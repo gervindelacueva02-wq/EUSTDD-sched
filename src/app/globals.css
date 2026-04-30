@@ -129,11 +129,13 @@
   }
 }
 
-/* Small thin scrollbar styling */
+/* Small thin scrollbar styling with proper scrolling */
 .scrollbar-hide {
   -ms-overflow-style: thin;  /* IE and Edge */
   scrollbar-width: thin;  /* Firefox - thin scrollbar */
   scrollbar-color: #d1d5db transparent;  /* Firefox */
+  overflow-y: scroll !important;
+  scroll-behavior: smooth;
 }
 
 .scrollbar-hide::-webkit-scrollbar {
@@ -151,6 +153,11 @@
 
 .scrollbar-hide::-webkit-scrollbar-thumb:hover {
   background: #9ca3af;
+}
+
+/* Enable scrolling on popover content */
+[data-slot="popover-content"] {
+  pointer-events: auto !important;
 }
 
 /* Ticker scroll animation */
