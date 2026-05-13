@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { unstable_cache } from 'next/cache';
 import { prisma } from '@/lib/db';
 
 // Helper function to safely parse JSON
@@ -11,16 +12,24 @@ function safeJsonParse(str: string | null | undefined, fallback: unknown = null)
   }
 }
 
-// GET - Fetch all schedule data
-export async function GET() {
-  try {
-    let data = await prisma.scheduleData.findUnique({
+let scheduleCacheBuster = 0;
+
+const getCachedScheduleData = unstable_cache(
+  async () => {
+    const data = await prisma.scheduleData.findUnique({
       where: { id: 'main' },
+      select: {
+        events: true,
+        personnel: true,
+        projects: true,
+        tickerMessages: true,
+        urgentConcerns: true,
+        settings: true,
+      },
     });
 
-    // Create default data if not exists
     if (!data) {
-      data = await prisma.scheduleData.create({
+      const created = await prisma.scheduleData.create({
         data: {
           id: 'main',
           events: '[]',
@@ -44,15 +53,40 @@ export async function GET() {
           }),
         },
       });
+
+      return {
+        events: [],
+        personnelStatuses: [],
+        projects: [],
+        tickerMessages: [],
+        urgentConcerns: [],
+        settings: safeJsonParse(created.settings, {}),
+      };
     }
 
-    return NextResponse.json({
+    return {
       events: safeJsonParse(data.events, []),
       personnelStatuses: safeJsonParse(data.personnel, []),
       projects: safeJsonParse(data.projects, []),
       tickerMessages: safeJsonParse(data.tickerMessages, []),
       urgentConcerns: safeJsonParse(data.urgentConcerns, []),
       settings: safeJsonParse(data.settings, {}),
+    };
+  },
+  [scheduleCacheBuster],
+  { revalidate: 300 }
+);
+
+// GET - Fetch all schedule data
+export async function GET() {
+  try {
+    const scheduleData = await getCachedScheduleData();
+
+    return NextResponse.json(scheduleData, {
+      headers: {
+        'Cache-Control': 'private, max-age=300, stale-while-revalidate=60',
+        'Content-Type': 'application/json',
+      },
     });
   } catch (error) {
     console.error('Error fetching schedule data:', error);
@@ -85,7 +119,17 @@ export async function POST(request: Request) {
         urgentConcerns: JSON.stringify(urgentConcerns || []),
         settings: JSON.stringify(settings || {}),
       },
+      select: {
+        events: true,
+        personnel: true,
+        projects: true,
+        tickerMessages: true,
+        urgentConcerns: true,
+        settings: true,
+      },
     });
+
+    scheduleCacheBuster += 1;
 
     return NextResponse.json({
       events: safeJsonParse(data.events, []),

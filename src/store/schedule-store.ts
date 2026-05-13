@@ -142,30 +142,30 @@ const resourceCache = {
 // Global sync frequency setting (can be modified at runtime)
 let syncFrequencyMs = 30000; // Default: 30 seconds (down from 3 seconds)
 
-// Helper function to fetch single resource
-async function fetchResource(endpoint: string): Promise<any> {
+// Helper function to fetch the full schedule state in one request
+async function fetchScheduleState(): Promise<any> {
   try {
-    const response = await fetch(endpoint);
+    const response = await fetch('/api/schedule');
     if (response.ok) {
       return await response.json();
     }
   } catch (error) {
-    console.error(`Failed to fetch ${endpoint}:`, error);
+    console.error('Failed to fetch schedule state:', error);
   }
   return null;
 }
 
-// Helper function to save single resource
-async function saveResource(endpoint: string, data: any): Promise<boolean> {
+// Helper function to save the full schedule state in one request
+async function saveScheduleState(data: any): Promise<boolean> {
   try {
-    const response = await fetch(endpoint, {
+    const response = await fetch('/api/schedule', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
     return response.ok;
   } catch (error) {
-    console.error(`Failed to save ${endpoint}:`, error);
+    console.error('Failed to save schedule state:', error);
     return false;
   }
 }
@@ -181,32 +181,31 @@ export const useScheduleStore = create<ScheduleStore>()((set, get) => ({
   _hasHydrated: false,
   _syncFrequency: 30, // Configurable sync frequency in seconds
 
-  // Load data from server (initial load - fetches all resources in parallel)
+  // Load data from server (initial load - fetches full schedule state in one request)
   loadFromServer: async () => {
     try {
-      const [events, personnel, projects, concerns, ticker, settings] = await Promise.all([
-        fetchResource('/api/schedule/events'),
-        fetchResource('/api/schedule/personnel'),
-        fetchResource('/api/schedule/projects'),
-        fetchResource('/api/schedule/concerns'),
-        fetchResource('/api/schedule/ticker'),
-        fetchResource('/api/schedule/settings'),
-      ]);
+      const data = await fetchScheduleState();
+      const events = data?.events ?? demoEvents;
+      const personnel = data?.personnelStatuses ?? demoPersonnel;
+      const projects = data?.projects ?? demoProjects;
+      const concerns = data?.urgentConcerns ?? demoUrgentConcerns;
+      const ticker = data?.tickerMessages ?? [];
+      const settings = data?.settings ?? {};
 
       // Update cache
-      resourceCache.events = JSON.stringify(events || []);
-      resourceCache.personnel = JSON.stringify(personnel || []);
-      resourceCache.projects = JSON.stringify(projects || []);
-      resourceCache.urgentConcerns = JSON.stringify(concerns || []);
-      resourceCache.tickerMessages = JSON.stringify(ticker || []);
-      resourceCache.settings = JSON.stringify(settings || {});
+      resourceCache.events = JSON.stringify(events);
+      resourceCache.personnel = JSON.stringify(personnel);
+      resourceCache.projects = JSON.stringify(projects);
+      resourceCache.urgentConcerns = JSON.stringify(concerns);
+      resourceCache.tickerMessages = JSON.stringify(ticker);
+      resourceCache.settings = JSON.stringify(settings);
 
       set({
-        events: events || demoEvents,
-        personnelStatuses: personnel || demoPersonnel,
-        projects: projects || demoProjects,
-        urgentConcerns: concerns || demoUrgentConcerns,
-        tickerMessages: ticker || [],
+        events,
+        personnelStatuses: personnel,
+        projects,
+        urgentConcerns: concerns,
+        tickerMessages: ticker,
         settings: { ...defaultSettings, ...settings },
         _hasHydrated: true,
       });
@@ -222,48 +221,49 @@ export const useScheduleStore = create<ScheduleStore>()((set, get) => ({
     
     syncInterval = setInterval(async () => {
       try {
-        const [events, personnel, projects, concerns, ticker, settings] = await Promise.all([
-          fetchResource('/api/schedule/events'),
-          fetchResource('/api/schedule/personnel'),
-          fetchResource('/api/schedule/projects'),
-          fetchResource('/api/schedule/concerns'),
-          fetchResource('/api/schedule/ticker'),
-          fetchResource('/api/schedule/settings'),
-        ]);
+        const data = await fetchScheduleState();
+        if (!data) return;
+
+        const events = data.events ?? [];
+        const personnel = data.personnelStatuses ?? [];
+        const projects = data.projects ?? [];
+        const concerns = data.urgentConcerns ?? [];
+        const ticker = data.tickerMessages ?? [];
+        const settings = data.settings ?? {};
 
         // Only update changed resources
         const updates: any = {};
-        const eventsStr = JSON.stringify(events || []);
+        const eventsStr = JSON.stringify(events);
         if (eventsStr !== resourceCache.events) {
           resourceCache.events = eventsStr;
-          updates.events = events || [];
+          updates.events = events;
         }
 
-        const personnelStr = JSON.stringify(personnel || []);
+        const personnelStr = JSON.stringify(personnel);
         if (personnelStr !== resourceCache.personnel) {
           resourceCache.personnel = personnelStr;
-          updates.personnelStatuses = personnel || [];
+          updates.personnelStatuses = personnel;
         }
 
-        const projectsStr = JSON.stringify(projects || []);
+        const projectsStr = JSON.stringify(projects);
         if (projectsStr !== resourceCache.projects) {
           resourceCache.projects = projectsStr;
-          updates.projects = projects || [];
+          updates.projects = projects;
         }
 
-        const concernsStr = JSON.stringify(concerns || []);
+        const concernsStr = JSON.stringify(concerns);
         if (concernsStr !== resourceCache.urgentConcerns) {
           resourceCache.urgentConcerns = concernsStr;
-          updates.urgentConcerns = concerns || [];
+          updates.urgentConcerns = concerns;
         }
 
-        const tickerStr = JSON.stringify(ticker || []);
+        const tickerStr = JSON.stringify(ticker);
         if (tickerStr !== resourceCache.tickerMessages) {
           resourceCache.tickerMessages = tickerStr;
-          updates.tickerMessages = ticker || [];
+          updates.tickerMessages = ticker;
         }
 
-        const settingsStr = JSON.stringify(settings || {});
+        const settingsStr = JSON.stringify(settings);
         if (settingsStr !== resourceCache.settings) {
           resourceCache.settings = settingsStr;
           updates.settings = { ...defaultSettings, ...settings };
@@ -293,7 +293,7 @@ export const useScheduleStore = create<ScheduleStore>()((set, get) => ({
     get().startAutoSync();
   },
 
-  // Save data to server (debounced with optimized endpoint calls)
+  // Save data to server (debounced with a single full-state request)
   saveToServer: async () => {
     if (saveTimeout) {
       clearTimeout(saveTimeout);
@@ -302,16 +302,14 @@ export const useScheduleStore = create<ScheduleStore>()((set, get) => ({
     saveTimeout = setTimeout(async () => {
       try {
         const state = get();
-        
-        // Save only changed resources in parallel
-        await Promise.all([
-          saveResource('/api/schedule/events', state.events),
-          saveResource('/api/schedule/personnel', state.personnelStatuses),
-          saveResource('/api/schedule/projects', state.projects),
-          saveResource('/api/schedule/concerns', state.urgentConcerns),
-          saveResource('/api/schedule/ticker', state.tickerMessages),
-          saveResource('/api/schedule/settings', state.settings),
-        ]);
+        await saveScheduleState({
+          events: state.events,
+          personnelStatuses: state.personnelStatuses,
+          projects: state.projects,
+          urgentConcerns: state.urgentConcerns,
+          tickerMessages: state.tickerMessages,
+          settings: state.settings,
+        });
       } catch (error) {
         console.error('Failed to save to server:', error);
       }

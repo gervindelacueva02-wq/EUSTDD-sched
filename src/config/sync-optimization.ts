@@ -11,6 +11,8 @@
  * Different use cases benefit from different sync intervals:
  */
 
+import { useEffect } from 'react';
+
 // Real-time collaboration (developers actively editing)
 export const SYNC_PRESETS = {
   REAL_TIME: 10,      // 10 seconds - for active editing sessions
@@ -68,22 +70,21 @@ function AdaptiveSync() {
   }, [store]);
 }
 
-// Example 3: Manual sync for specific resources
+// Example 3: Manual sync for the full schedule state
 async function syncSpecificResource() {
-  const response = await fetch('/api/schedule/events');
-  const events = await response.json();
-  // Handle events
+  const response = await fetch('/api/schedule');
+  const schedule = await response.json();
+  // Handle schedule data
 }
 
 /**
  * CACHE HEADERS
  * 
- * New endpoints include intelligent caching:
- * - Dynamic data (events, personnel, ticker, concerns): 30 seconds
- * - Static data (projects, settings): 60 seconds
- * 
- * This means within the cache window, duplicate requests from the same
- * browser will return cached responses, avoiding network requests entirely.
+ * The combined schedule endpoint supports a 5-minute server cache and
+ * short-lived browser freshness with stale-while-revalidate.
+ *
+ * This means repeated requests can be answered from the API cache instead of
+ * re-querying the database on every call.
  */
 
 /**
@@ -92,18 +93,17 @@ async function syncSpecificResource() {
  * You can add logging to monitor sync behavior:
  */
 
-function enableSyncLogging(enabled = true) {
+function enableSyncLogging(enabled = false) {
+  if (!enabled) return;
+
   const originalFetch = window.fetch;
-  
-  if (enabled) {
-    window.fetch = function(...args) {
-      const url = args[0];
-      if (typeof url === 'string' && url.includes('/api/schedule')) {
-        console.log(`[SYNC] Fetching ${url} at ${new Date().toLocaleTimeString()}`);
-      }
-      return originalFetch.apply(this, args);
-    };
-  }
+  window.fetch = function(...args) {
+    const url = args[0];
+    if (typeof url === 'string' && url.includes('/api/schedule')) {
+      console.debug(`[SYNC] Fetching ${url} at ${new Date().toLocaleTimeString()}`);
+    }
+    return originalFetch.apply(this, args);
+  };
 }
 
 /**
