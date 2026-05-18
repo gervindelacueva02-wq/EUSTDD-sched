@@ -140,7 +140,7 @@ const resourceCache = {
 };
 
 // Global sync frequency setting (can be modified at runtime)
-let syncFrequencyMs = 30000; // Default: 30 seconds (down from 3 seconds)
+let syncFrequencyMs = 10000; // Default: 10 seconds for faster cross-device sync
 
 // Helper function to fetch the full schedule state in one request
 async function fetchScheduleState(): Promise<any> {
@@ -184,7 +184,7 @@ export const useScheduleStore = create<ScheduleStore>()((set, get) => ({
   tickerMessages: [],
   settings: defaultSettings,
   _hasHydrated: false,
-  _syncFrequency: 30, // Configurable sync frequency in seconds
+  _syncFrequency: 10, // Configurable sync frequency in seconds
 
   // Load data from server (initial load - fetches full schedule state in one request)
   loadFromServer: async () => {
