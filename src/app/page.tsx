@@ -402,7 +402,7 @@ function useOverflowTransition<T>(
     }
     // Use microtask to avoid synchronous setState warning
     queueMicrotask(() => setCurrentPage(0));
-  }, [settings.transitionStyle, cleanupAnimations, containerRef]);
+  }, [settings.transitionStyle, settings.transitionSpeed, cleanupAnimations]);
 
   // Pagination for fade/slideUp/slideLeft
   useEffect(() => {

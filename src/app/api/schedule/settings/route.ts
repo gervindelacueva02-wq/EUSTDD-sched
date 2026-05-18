@@ -35,7 +35,7 @@ export async function GET() {
 
     return NextResponse.json(settings, {
       headers: {
-        'Cache-Control': 'private, max-age=60',
+        'Cache-Control': 'no-store, no-cache, max-age=0, must-revalidate',
         'Content-Type': 'application/json',
       },
     });
