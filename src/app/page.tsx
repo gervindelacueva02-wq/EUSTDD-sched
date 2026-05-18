@@ -288,11 +288,8 @@ function useOverflowTransition<T>(
     if (actualContentHeight > 0) {
       setContentHeight(actualContentHeight);
       
-      // For gentle continuous scroll, allow the animation to run even when
-      // strict overflow calculation may be false on certain devices.
       const contentExceedsContainer = actualContentHeight > containerHeightValue;
-      const hasOverflowValue = contentExceedsContainer || settings.transitionStyle === 'gentleContinuousScroll';
-      setHasOverflow(hasOverflowValue);
+      setHasOverflow(contentExceedsContainer);
       
       // If no overflow for non-continuous modes, reset scroll position
       if (!contentExceedsContainer && settings.transitionStyle !== 'gentleContinuousScroll' && containerRef.current) {
@@ -446,8 +443,7 @@ function useOverflowTransition<T>(
   // Continuous scroll for verticalAutoScroll and gentleContinuousScroll
   useEffect(() => {
     // Only start animation if content actually overflows
-    if (!hasOverflow && settings.transitionStyle !== 'gentleContinuousScroll') {
-      // Stop any running animation and reset scroll for non-continuous modes
+    if (!hasOverflow) {
       cleanupAnimations();
       if (containerRef.current) {
         containerRef.current.scrollTo({ top: 0, behavior: 'auto' });
@@ -473,13 +469,17 @@ function useOverflowTransition<T>(
       isAnimatingRef.current = true;
       lastTimeRef.current = 0;
       
-      const scrollContent = container.querySelector('[data-content-measure]') as HTMLElement | null;
+      let scrollContent = container.querySelector('[data-content-measure]') as HTMLElement | null;
+      if (!scrollContent) {
+        scrollContent = container.firstElementChild as HTMLElement | null;
+      }
       if (scrollContent) {
         scrollContent.style.willChange = 'transform';
+        scrollContent.style.backfaceVisibility = 'hidden';
       }
       
       // Use measured content height from state (updated dynamically)
-      const resetPoint = contentHeight + containerHeight;
+      const resetPoint = Math.max(1, contentHeight + containerHeight);
       
       const animate = (timestamp: number) => {
         if (!isAnimatingRef.current) return;
@@ -494,11 +494,11 @@ function useOverflowTransition<T>(
         
         // When reaching the reset point, seamlessly reset to beginning
         if (scrollPositionRef.current >= resetPoint) {
-          scrollPositionRef.current = 0;
+          scrollPositionRef.current %= resetPoint;
         }
         
         if (scrollContent) {
-          scrollContent.style.transform = `translateY(-${scrollPositionRef.current}px)`;
+          scrollContent.style.transform = `translate3d(0, -${scrollPositionRef.current}px, 0)`;
         }
         animationRef.current = requestAnimationFrame(animate);
       };
@@ -509,6 +509,7 @@ function useOverflowTransition<T>(
         if (scrollContent) {
           scrollContent.style.transform = '';
           scrollContent.style.willChange = '';
+          scrollContent.style.backfaceVisibility = '';
         }
         cleanupAnimations();
       };
