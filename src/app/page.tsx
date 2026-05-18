@@ -468,6 +468,11 @@ function useOverflowTransition<T>(
       isAnimatingRef.current = true;
       lastTimeRef.current = 0;
       
+      const scrollContent = container.querySelector('[data-content-measure]') as HTMLElement | null;
+      if (scrollContent) {
+        scrollContent.style.willChange = 'transform';
+      }
+      
       // Use measured content height from state (updated dynamically)
       const resetPoint = contentHeight + containerHeight;
       
@@ -479,7 +484,9 @@ function useOverflowTransition<T>(
         const currentContentHeight = originalContent?.scrollHeight || 0;
         if (currentContentHeight > 0 && currentContentHeight <= container.clientHeight) {
           // Content no longer overflows, stop animation
-          container.scrollTo({ top: 0, behavior: 'auto' });
+          if (scrollContent) {
+            scrollContent.style.transform = 'translateY(0px)';
+          }
           scrollPositionRef.current = 0;
           return;
         }
@@ -497,14 +504,21 @@ function useOverflowTransition<T>(
           scrollPositionRef.current = 0;
         }
         
-        // Use direct scrollTop for smooth frame-by-frame animation (no conflicting scrollTo behavior)
-        container.scrollTop = scrollPositionRef.current;
+        if (scrollContent) {
+          scrollContent.style.transform = `translateY(-${scrollPositionRef.current}px)`;
+        }
         animationRef.current = requestAnimationFrame(animate);
       };
 
       animationRef.current = requestAnimationFrame(animate);
       
-      return () => cleanupAnimations();
+      return () => {
+        if (scrollContent) {
+          scrollContent.style.transform = '';
+          scrollContent.style.willChange = '';
+        }
+        cleanupAnimations();
+      };
     } else if (settings.transitionStyle === 'verticalAutoScroll') {
       // Step-based auto scroll with pause
       const stepSize = itemHeight * 2; // Scroll 2 items at a time
