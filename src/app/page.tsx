@@ -296,7 +296,7 @@ function useOverflowTransition<T>(
       
       // If no overflow, reset scroll position
       if (!contentExceedsContainer && containerRef.current) {
-        containerRef.current.scrollTop = 0;
+        containerRef.current.scrollTo({ top: 0, behavior: 'auto' });
         scrollPositionRef.current = 0;
       }
     }
@@ -398,7 +398,7 @@ function useOverflowTransition<T>(
     cleanupAnimations();
     scrollPositionRef.current = 0;
     if (containerRef.current) {
-      containerRef.current.scrollTop = 0;
+      containerRef.current.scrollTo({ top: 0, behavior: 'auto' });
     }
     // Use microtask to avoid synchronous setState warning
     queueMicrotask(() => setCurrentPage(0));
@@ -410,7 +410,7 @@ function useOverflowTransition<T>(
     if (!hasOverflow) {
       cleanupAnimations();
       if (containerRef.current) {
-        containerRef.current.scrollTop = 0;
+        containerRef.current.scrollTo({ top: 0, behavior: 'auto' });
         scrollPositionRef.current = 0;
       }
       queueMicrotask(() => setCurrentPage(0));
@@ -450,7 +450,7 @@ function useOverflowTransition<T>(
       // Stop any running animation and reset scroll
       cleanupAnimations();
       if (containerRef.current) {
-        containerRef.current.scrollTop = 0;
+        containerRef.current.scrollTo({ top: 0, behavior: 'auto' });
         scrollPositionRef.current = 0;
       }
       return;
@@ -469,9 +469,6 @@ function useOverflowTransition<T>(
       lastTimeRef.current = 0;
       
       // Use measured content height from state (updated dynamically)
-      // The reset point is content height + container height (spacer allows last item to fully exit)
-      // Content structure: [items] + [spacer of containerHeight] + [items]
-      // We reset when scroll reaches contentHeight + containerHeight (spacer has fully scrolled)
       const resetPoint = contentHeight + containerHeight;
       
       const animate = (timestamp: number) => {
@@ -482,7 +479,7 @@ function useOverflowTransition<T>(
         const currentContentHeight = originalContent?.scrollHeight || 0;
         if (currentContentHeight > 0 && currentContentHeight <= container.clientHeight) {
           // Content no longer overflows, stop animation
-          container.scrollTop = 0;
+          container.scrollTo({ top: 0, behavior: 'auto' });
           scrollPositionRef.current = 0;
           return;
         }
@@ -496,12 +493,12 @@ function useOverflowTransition<T>(
         scrollPositionRef.current += (scrollSpeed * delta) / 1000;
         
         // When reaching the reset point, seamlessly reset to beginning
-        // This allows the last item to fully exit before the first item appears
         if (scrollPositionRef.current >= resetPoint) {
           scrollPositionRef.current = 0;
         }
         
-        container.scrollTop = scrollPositionRef.current;
+        // Use smooth scrollTo for better animation
+        container.scrollTo({ top: scrollPositionRef.current, behavior: settings.smoothScrollEnabled ? 'smooth' : 'auto' });
         animationRef.current = requestAnimationFrame(animate);
       };
 
@@ -524,7 +521,7 @@ function useOverflowTransition<T>(
         const contentElement = originalContent || currentContainer.querySelector('[data-content-measure]');
         if (contentElement && contentElement.scrollHeight <= currentContainer.clientHeight) {
           // Content no longer overflows, stop animation
-          currentContainer.scrollTop = 0;
+          currentContainer.scrollTo({ top: 0, behavior: 'auto' });
           scrollPositionRef.current = 0;
           return;
         }
@@ -538,7 +535,10 @@ function useOverflowTransition<T>(
             if (!isAnimatingRef.current) return;
             scrollPositionRef.current = 0;
             if (containerRef.current) {
-              containerRef.current.scrollTop = 0;
+              containerRef.current.scrollTo({
+                top: 0,
+                behavior: settings.smoothScrollEnabled ? 'smooth' : 'auto'
+              });
             }
           }, pauseDuration / 2);
           
@@ -561,7 +561,7 @@ function useOverflowTransition<T>(
     cleanupAnimations();
     scrollPositionRef.current = 0;
     if (containerRef.current) {
-      containerRef.current.scrollTop = 0;
+      containerRef.current.scrollTo({ top: 0, behavior: 'auto' });
     }
     // Use microtask to avoid synchronous setState warning
     queueMicrotask(() => setCurrentPage(0));
