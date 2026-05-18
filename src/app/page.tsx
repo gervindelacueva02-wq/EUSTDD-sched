@@ -464,6 +464,11 @@ function useOverflowTransition<T>(
     const scrollSpeed = getScrollSpeed(settings.transitionSpeed);
     
     if (settings.transitionStyle === 'gentleContinuousScroll') {
+      // Wait until we have layout measurements before starting the animation.
+      if (contentHeight <= 0 || containerHeight <= 0) {
+        return;
+      }
+
       // Smooth continuous scroll with seamless loop using spacer
       isAnimatingRef.current = true;
       lastTimeRef.current = 0;
