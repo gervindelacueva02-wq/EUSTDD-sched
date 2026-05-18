@@ -288,14 +288,14 @@ function useOverflowTransition<T>(
     if (actualContentHeight > 0) {
       setContentHeight(actualContentHeight);
       
-      // ONLY trigger transition if content actually exceeds container height
-      // This handles cases where 2 items with long text overflow, 
-      // or 7 short items don't overflow
+      // For gentle continuous scroll, allow the animation to run even when
+      // strict overflow calculation may be false on certain devices.
       const contentExceedsContainer = actualContentHeight > containerHeightValue;
-      setHasOverflow(contentExceedsContainer);
+      const hasOverflowValue = contentExceedsContainer || settings.transitionStyle === 'gentleContinuousScroll';
+      setHasOverflow(hasOverflowValue);
       
-      // If no overflow, reset scroll position
-      if (!contentExceedsContainer && containerRef.current) {
+      // If no overflow for non-continuous modes, reset scroll position
+      if (!contentExceedsContainer && settings.transitionStyle !== 'gentleContinuousScroll' && containerRef.current) {
         containerRef.current.scrollTo({ top: 0, behavior: 'auto' });
         scrollPositionRef.current = 0;
       }
@@ -446,8 +446,8 @@ function useOverflowTransition<T>(
   // Continuous scroll for verticalAutoScroll and gentleContinuousScroll
   useEffect(() => {
     // Only start animation if content actually overflows
-    if (!hasOverflow) {
-      // Stop any running animation and reset scroll
+    if (!hasOverflow && settings.transitionStyle !== 'gentleContinuousScroll') {
+      // Stop any running animation and reset scroll for non-continuous modes
       cleanupAnimations();
       if (containerRef.current) {
         containerRef.current.scrollTo({ top: 0, behavior: 'auto' });
@@ -1419,9 +1419,9 @@ function SchedulePanel({
       </div>
       <div 
         ref={containerRef}
-        className="flex-1 overflow-y-auto p-2 sm:p-3 scrollbar-hide space-y-2
-          bg-gradient-to-b from-transparent via-slate-50/30 to-transparent dark:via-slate-900/20"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        className={`flex-1 ${isGentleScroll ? 'overflow-hidden' : 'overflow-y-auto'} p-2 sm:p-3 scrollbar-hide space-y-2
+          bg-gradient-to-b from-transparent via-slate-50/30 to-transparent dark:via-slate-900/20`}
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', touchAction: isGentleScroll ? 'none' : undefined }}
       >
         {events.length === 0 ? (
           <div className="flex items-center justify-center h-16" />
@@ -1669,9 +1669,9 @@ function PersonnelColumn({
       </div>
       <div 
         ref={containerRef}
-        className="flex-1 overflow-y-auto p-1.5 scrollbar-hide min-h-0 space-y-1.5
-          bg-gradient-to-b from-transparent via-slate-50/20 to-transparent dark:via-slate-900/10"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        className={`flex-1 ${isGentleScroll ? 'overflow-hidden' : 'overflow-y-auto'} p-1.5 scrollbar-hide min-h-0 space-y-1.5
+          bg-gradient-to-b from-transparent via-slate-50/20 to-transparent dark:via-slate-900/10`}
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', touchAction: isGentleScroll ? 'none' : undefined }}
       >
         {personnel.length === 0 ? (
           <div className="text-center py-4" />
@@ -2091,9 +2091,9 @@ function UrgentConcernColumn({
       </div>
       <div 
         ref={containerRef}
-        className="flex-1 overflow-y-auto p-1.5 scrollbar-hide min-h-0 space-y-1
-          bg-gradient-to-b from-transparent via-red-50/10 to-transparent dark:via-red-950/10"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        className={`flex-1 ${isGentleScroll ? 'overflow-hidden' : 'overflow-y-auto'} p-1.5 scrollbar-hide min-h-0 space-y-1
+          bg-gradient-to-b from-transparent via-red-50/10 to-transparent dark:via-red-950/10`}
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', touchAction: isGentleScroll ? 'none' : undefined }}
       >
         {concerns.length === 0 ? (
           <div className="text-center py-4" />
@@ -2229,9 +2229,9 @@ function ProjectColumn({
       </div>
       <div 
         ref={containerRef}
-        className="flex-1 overflow-y-auto p-1.5 scrollbar-hide min-h-0 space-y-1
-          bg-gradient-to-b from-transparent via-green-50/10 to-transparent dark:via-green-950/10"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        className={`flex-1 ${isGentleScroll ? 'overflow-hidden' : 'overflow-y-auto'} p-1.5 scrollbar-hide min-h-0 space-y-1
+          bg-gradient-to-b from-transparent via-green-50/10 to-transparent dark:via-green-950/10`}
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', touchAction: isGentleScroll ? 'none' : undefined }}
       >
         {projects.length === 0 ? (
           <div className="text-center py-4" />
