@@ -497,8 +497,8 @@ function useOverflowTransition<T>(
           scrollPositionRef.current = 0;
         }
         
-        // Use smooth scrollTo for better animation
-        container.scrollTo({ top: scrollPositionRef.current, behavior: settings.smoothScrollEnabled ? 'smooth' : 'auto' });
+        // Use direct scrollTop for smooth frame-by-frame animation (no conflicting scrollTo behavior)
+        container.scrollTop = scrollPositionRef.current;
         animationRef.current = requestAnimationFrame(animate);
       };
 
