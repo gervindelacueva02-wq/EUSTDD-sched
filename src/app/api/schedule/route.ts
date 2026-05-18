@@ -1,14 +1,20 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 
-// Helper function to safely parse JSON
-function safeJsonParse(str: string | null | undefined, fallback: unknown = null) {
-  if (!str) return fallback;
-  try {
-    return JSON.parse(str);
-  } catch {
-    return fallback;
+// Helper function to safely parse JSON or pass objects through
+function safeJsonParse<T>(value: unknown, fallback: T) {
+  if (value === null || value === undefined) return fallback;
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value) as T;
+    } catch {
+      return fallback;
+    }
   }
+  if (typeof value === 'object') {
+    return value as T;
+  }
+  return fallback;
 }
 
 async function getScheduleData() {

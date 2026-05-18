@@ -484,18 +484,6 @@ function useOverflowTransition<T>(
       const animate = (timestamp: number) => {
         if (!isAnimatingRef.current) return;
         
-        // Check if we still have overflow using original content (not spacer/duplicates)
-        const originalContent = container.querySelector('[data-original-content]');
-        const currentContentHeight = originalContent?.scrollHeight || 0;
-        if (currentContentHeight > 0 && currentContentHeight <= container.clientHeight) {
-          // Content no longer overflows, stop animation
-          if (scrollContent) {
-            scrollContent.style.transform = 'translateY(0px)';
-          }
-          scrollPositionRef.current = 0;
-          return;
-        }
-        
         if (!lastTimeRef.current) {
           lastTimeRef.current = timestamp;
         }
