@@ -145,10 +145,11 @@ let syncFrequencyMs = 30000; // Default: 30 seconds (down from 3 seconds)
 // Helper function to fetch the full schedule state in one request
 async function fetchScheduleState(): Promise<any> {
   try {
-    const response = await fetch('/api/schedule');
+    const response = await fetch('/api/schedule', { cache: 'no-store' });
     if (response.ok) {
       return await response.json();
     }
+    console.error('Schedule fetch failed:', response.statusText);
   } catch (error) {
     console.error('Failed to fetch schedule state:', error);
   }
@@ -160,9 +161,13 @@ async function saveScheduleState(data: any): Promise<boolean> {
   try {
     const response = await fetch('/api/schedule', {
       method: 'POST',
+      cache: 'no-store',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
+    if (!response.ok) {
+      console.error('Schedule save failed:', response.statusText);
+    }
     return response.ok;
   } catch (error) {
     console.error('Failed to save schedule state:', error);

@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { unstable_cache } from 'next/cache';
 import { prisma } from '@/lib/db';
 
 // Helper function to safely parse JSON
@@ -12,79 +11,73 @@ function safeJsonParse(str: string | null | undefined, fallback: unknown = null)
   }
 }
 
-let scheduleCacheBuster = 0;
+async function getScheduleData() {
+  const data = await prisma.scheduleData.findUnique({
+    where: { id: 'main' },
+    select: {
+      events: true,
+      personnel: true,
+      projects: true,
+      tickerMessages: true,
+      urgentConcerns: true,
+      settings: true,
+    },
+  });
 
-const getCachedScheduleData = unstable_cache(
-  async () => {
-    const data = await prisma.scheduleData.findUnique({
-      where: { id: 'main' },
-      select: {
-        events: true,
-        personnel: true,
-        projects: true,
-        tickerMessages: true,
-        urgentConcerns: true,
-        settings: true,
+  if (!data) {
+    const created = await prisma.scheduleData.create({
+      data: {
+        id: 'main',
+        events: '[]',
+        personnel: '[]',
+        projects: '[]',
+        tickerMessages: '[]',
+        urgentConcerns: '[]',
+        settings: JSON.stringify({
+          theme: 'light',
+          transitionStyle: 'static',
+          transitionSpeed: 'normal',
+          customTransitionSeconds: 3,
+          smoothScrollEnabled: true,
+          statusColors: {
+            upcoming: '#3b82f6',
+            ongoing: '#22c55e',
+            completed: '#9ca3af',
+          },
+          pinEnabled: false,
+          pin: '',
+        }),
       },
     });
 
-    if (!data) {
-      const created = await prisma.scheduleData.create({
-        data: {
-          id: 'main',
-          events: '[]',
-          personnel: '[]',
-          projects: '[]',
-          tickerMessages: '[]',
-          urgentConcerns: '[]',
-          settings: JSON.stringify({
-            theme: 'light',
-            transitionStyle: 'static',
-            transitionSpeed: 'normal',
-            customTransitionSeconds: 3,
-            smoothScrollEnabled: true,
-            statusColors: {
-              upcoming: '#3b82f6',
-              ongoing: '#22c55e',
-              completed: '#9ca3af',
-            },
-            pinEnabled: false,
-            pin: '',
-          }),
-        },
-      });
-
-      return {
-        events: [],
-        personnelStatuses: [],
-        projects: [],
-        tickerMessages: [],
-        urgentConcerns: [],
-        settings: safeJsonParse(created.settings, {}),
-      };
-    }
-
     return {
-      events: safeJsonParse(data.events, []),
-      personnelStatuses: safeJsonParse(data.personnel, []),
-      projects: safeJsonParse(data.projects, []),
-      tickerMessages: safeJsonParse(data.tickerMessages, []),
-      urgentConcerns: safeJsonParse(data.urgentConcerns, []),
-      settings: safeJsonParse(data.settings, {}),
+      events: [],
+      personnelStatuses: [],
+      projects: [],
+      tickerMessages: [],
+      urgentConcerns: [],
+      settings: safeJsonParse(created.settings, {}),
     };
-  },
-  [scheduleCacheBuster],
-  { revalidate: 300 }
-);
+  }
+
+  return {
+    events: safeJsonParse(data.events, []),
+    personnelStatuses: safeJsonParse(data.personnel, []),
+    projects: safeJsonParse(data.projects, []),
+    tickerMessages: safeJsonParse(data.tickerMessages, []),
+    urgentConcerns: safeJsonParse(data.urgentConcerns, []),
+    settings: safeJsonParse(data.settings, {}),
+  };
+}
 
 // GET - Fetch all schedule data
 export async function GET() {
   try {
-    const scheduleData = await getCachedScheduleData();
+    const scheduleData = await getScheduleData();
 
     return NextResponse.json(scheduleData, {
       headers: {
-        'Cache-Control': 'private, max-age=300, stale-while-revalidate=60',
+        'Cache-Control': 'no-store, no-cache, max-age=0, must-revalidate',
         'Content-Type': 'application/json',
       },
     });
@@ -128,8 +121,6 @@ export async function POST(request: Request) {
         settings: true,
       },
     });
-
-    scheduleCacheBuster += 1;
 
     return NextResponse.json({
       events: safeJsonParse(data.events, []),
