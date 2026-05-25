@@ -93,3 +93,17 @@ SYNC_PRESETS.BATTERY_SAVER: 180, // Low power mode
 - ✅ Backward compatible
 - ✅ Works with existing UI
 - ✅ Optional to use new endpoints
+
+## 💰 Database Cost Optimization
+
+For detailed guide on reducing Neon compute costs, see **[NEON_OPTIMIZATION_GUIDE.md](./NEON_OPTIMIZATION_GUIDE.md)**
+
+### Quick Status Check ✅
+
+- **Auto Suspend**: Enabled (5 min) - Compute sleeps when idle
+- **Connection Pooling**: Using `-pooler` endpoint - Reduces connection overhead
+- **Sync Interval**: 30 seconds - Good balance of cost vs responsiveness
+- **Query Optimization**: Using split endpoints - Fetches only needed data
+- **Dev Servers**: Stopped when not in use - No 24/7 polling
+
+All 7 Neon optimization practices implemented! 🚀

@@ -179,3 +179,12 @@ DIRECT_DATABASE_URL="postgresql://username:password@ep-xxx-direct.us-east-2.aws.
 - ✅ **PostgreSQL** - Full compatibility with Prisma
 - ✅ **Auto-scaling** - Handles traffic spikes
 - ✅ **Branching** - Create database branches for testing
+
+### 📖 Optimize Neon Costs
+
+This project is already optimized to minimize Neon compute costs. See [NEON_OPTIMIZATION_GUIDE.md](./NEON_OPTIMIZATION_GUIDE.md) for:
+- ✅ Auto suspend (compute sleep) configuration
+- ✅ Connection pooling setup
+- ✅ Query optimization techniques
+- ✅ Cost reduction strategies
+- ✅ All 7 best practices explained

@@ -111,8 +111,27 @@ These optimizations will reduce:
 3. Adjust sync frequency if needed (via settings in app)
 4. Scale to paid plan if needed as usage grows
 
+## 💰 Reducing Database Costs
+
+This project uses **Neon** for PostgreSQL database. To stay on the free tier and minimize costs:
+
+✅ **Auto Suspend enabled** - Compute sleeps after 5 minutes of inactivity
+✅ **Connection pooling** - Using `-pooler` endpoint reduces overhead
+✅ **30-second sync interval** - Balanced cost vs responsiveness
+✅ **Smart queries** - Split endpoints fetch only needed columns
+✅ **No background services** - No 24/7 polling
+
+See **[NEON_OPTIMIZATION_GUIDE.md](./NEON_OPTIMIZATION_GUIDE.md)** for:
+- How to configure auto-suspend in Neon
+- Query optimization techniques
+- Real-time update strategies
+- All 7 cost reduction best practices
+
+**Result**: Stays well within Neon's free tier limits 🎉
+
 ## Additional Resources
 
+- [Neon Optimization Guide](./NEON_OPTIMIZATION_GUIDE.md) - Cost reduction strategies
 - [Render Documentation](https://render.com/docs)
 - [Next.js Deployment](https://nextjs.org/docs/app/building-your-application/deploying)
 - [Prisma Edge Functions](https://www.prisma.io/docs/guides/performance-and-optimization)
