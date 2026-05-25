@@ -3,12 +3,14 @@ services:
     name: eustdd-schedule
     runtime: node
     buildCommand: npm install && npx prisma generate && npm run build
-    startCommand: npx prisma db push && npm run start
+    startCommand: npx prisma db push && node .next/standalone/server.js
     envVars:
       - key: NODE_ENV
         value: production
       - key: NODE_VERSION
         value: 20
+      - key: PORT
+        value: 10000
       - key: DATABASE_URL
         sync: false
       - key: DIRECT_DATABASE_URL
