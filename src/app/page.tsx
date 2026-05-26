@@ -297,7 +297,7 @@ function useOverflowTransition<T>(
         scrollPositionRef.current = 0;
       }
     }
-  }, [containerRef, itemHeight]);
+  }, [containerRef, itemHeight, settings.transitionStyle]);
 
   // Setup observers for container and content size changes
   useEffect(() => {
